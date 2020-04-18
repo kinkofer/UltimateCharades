@@ -1,0 +1,113 @@
+<html>
+    <head>
+        <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.7.0.js"></script>
+        <script type="text/javascript" src="airconsole-view-manager.js"></script>
+        <script type="text/javascript" src="model.js"></script>
+        <script type="text/javascript" src="jquery-3.5.0.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css" />
+
+        <style>
+            body { color: whitesmoke; }
+            #playerDiv { 
+                vertical-align: middle;
+                font-size: xx-large;
+                padding: 10px;
+            }
+        </style>
+    </head>
+    <body onload="init()">
+        <div id="top" style="padding-top: 30px;"></div>
+
+
+        <div id="PlayerStart" class="view default-view">
+            <div>
+                <h1>Welcome</h1>
+                <div id="playerDiv">
+                    <img src="" id="playerImage" />
+                    <span id="playerNickname"></span>
+                </div>
+            </div>
+            <div>
+                <h1>Ready to start?</h1>
+                <button id="startBtn">Start</button>
+            </div>
+            <div id="teamDiv" class="noTeam">
+                <h1>Choose your team</h1>
+                <button id="redTeamBtn">Red</button>
+                <button id="blueTeamBtn">Blue</button>
+            </div>
+            <div>
+                <h1>Enter your phrases:</h1>
+                <input type="text" />
+                <button id="phraseBtn">Submit</button>
+                <p>
+                    <span>Phrases submitted:</span>
+                    <span id="phrasesSubmittedTxt">0</span>
+                </p>
+            </div>
+        </div>
+        
+        
+        <script type="text/javascript">
+            var airconsole;
+            var viewManager = null;
+
+            var player;
+
+            function init() {
+                airconsole = new AirConsole();
+
+                // var teamDiv = document.getElementById("teamDiv");
+
+                // When we press our button, we send a message to the screen
+                $('#redTeamBtn').click(function () {
+                    airconsole.setCustomDeviceStateProperty("team", Team.RED);
+                    changeElementToTeamColor($("#teamDiv").get(0), Team.RED);
+                    // airconsole.message(AirConsole.SCREEN, "How are you?");
+                });
+
+                $('#blueTeamBtn').click(function () {
+                    airconsole.setCustomDeviceStateProperty("team", Team.BLUE);
+                    changeElementToTeamColor($("#teamDiv").get(0), Team.BLUE);
+                    // airconsole.message(AirConsole.SCREEN, "How are you?");
+                });
+
+
+                airconsole.onReady = function(code) {
+                    viewManager = new AirConsoleViewManager(airconsole);
+
+                    var device_id = airconsole.getDeviceId();
+                    var profilePicture = airconsole.getProfilePicture(device_id);
+                    var nickname = airconsole.getNickname(device_id);
+
+                    player = new Player(device_id, profilePicture, nickname);
+                    updatePlayerDiv();
+                };
+
+                airconsole.onDeviceStateChange = function(device_id, user_data) {
+                    if (device_id == player.device_id) {
+                        player.profilePicture = airconsole.getProfilePicture(device_id);
+                        player.nickname = airconsole.getNickname(device_id);
+
+                        updatePlayerDiv();
+                    }
+                };
+
+                // Listen for messages
+                airconsole.onMessage = function (from, data) {
+
+                    // Show message on device screen
+                    // var info = document.createElement('DIV');
+                    // info.innerHTML = data;
+                    // document.body.appendChild(info);
+                };
+            }
+
+
+            function updatePlayerDiv() {
+                $("#playerImage").attr("src", player.profilePicture)
+                $("#playerNickname").html(player.nickname);
+            }
+        </script>
+    </body>
+</html>

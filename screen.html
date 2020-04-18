@@ -1,0 +1,199 @@
+<html>
+    <head>
+        <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.7.0.js"></script>
+        <script type="text/javascript" src="airconsole-view-manager.js"></script>
+        <script type="text/javascript" src="model.js"></script>
+        <script type="text/javascript" src="jquery-3.5.0.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="style.css" />
+
+        <style>
+            body { color: whitesmoke; }
+            /* #playersDiv { } */
+            .playerDiv { 
+                width: 40%;
+                border: 3px solid black;
+                vertical-align: middle;
+                font-size: xx-large;
+                padding: 10px;
+            }
+        </style>
+    </head>
+    <body onload="init()">
+        <div id="log">
+
+        </div>
+
+        <div id="Lobby" class="view default-view">
+            <h1>Ultimate Charades</h1>
+
+            <div id="playersDiv">
+                <h2>Waiting for...</h2>
+            </div>
+
+            <div id="redTeamDiv">
+                <h2>Red Team</h2>
+            </div>
+
+            <div id="blueTeamDiv">
+                <h2>Blue Team</h2>
+            </div>
+        </div>
+
+
+        
+        <script type="text/javascript">
+            var airconsole;
+            var viewManager = null;
+            var players = [];
+
+
+            
+
+            
+
+
+            function init() {
+                airconsole = new AirConsole();
+                
+
+                airconsole.onReady = function(code) {
+                    viewManager = new AirConsoleViewManager(airconsole);
+
+                    refreshPlayers();
+                }
+
+
+                airconsole.onConnect = function(device_id) {
+                    if (players.some(e => e.device_id == device_id)) {
+                        // Existing player detected
+                        return
+                    }
+
+                    var profilePicture = airconsole.getProfilePicture(device_id);
+                    var nickname = airconsole.getNickname(device_id);
+                    var newPlayer = new Player(device_id, profilePicture, nickname);
+                    players.push(newPlayer);
+                    
+                    refreshPlayers();
+                };
+
+
+                airconsole.onDisconnect = function(device_id) {
+                    // Remove player
+                    players = players.filter(e => e.device_id != device_id);
+
+                    refreshPlayers();
+                };
+
+
+                airconsole.onDeviceStateChange = function (device_id, user_data) {
+                    var player = players.find(e => e.device_id == device_id);
+
+                    if (player == undefined) { return; }
+
+                    player.profilePicture = airconsole.getProfilePicture(device_id);
+                    player.nickname = airconsole.getNickname(device_id);
+
+                    refreshPlayers();
+                };
+
+                airconsole.onCustomDeviceStateChange = function(device_id, data) {
+                    if (data.team) {
+                        setPlayerTeam(device_id, data.team);
+                    }
+
+                    viewManager.onViewChange(data, function(view_id) {
+
+                    });
+                };
+
+
+                // Listen for messages from other devices
+                airconsole.onMessage = function (device_id, data) {
+                    // We receive a message -> Send message back to the device
+                    // airconsole.message(from, "Full of pixels!");
+
+                    // // Show message on device screen
+                    // var info = document.createElement('div');
+                    // info.innerHTML = data;
+                    // document.body.appendChild(info);
+
+                };
+            }
+
+
+            function refreshPlayers() {
+                var deviceIDs = airconsole.getControllerDeviceIds();
+                airconsole.setActivePlayers(deviceIDs.length);
+
+                players.forEach(e => {
+                    createPlayerDiv(e);
+                });
+            }
+
+
+            function createPlayerDiv(player) {
+                var div = document.getElementById(player.getDivID());
+                if (div != undefined) {
+                    updatePlayerDiv(player);
+                    return;
+                }
+
+                div = document.createElement("div");
+                div.className = "playerDiv noTeam";
+                div.id = player.getDivID();
+
+                var img = document.createElement("img");
+                img.className = "playerImage";
+                img.src = player.profilePicture;
+                div.appendChild(img);
+
+                var span = document.createElement("span");
+                span.className = "playerNickname";
+                span.innerText = player.nickname
+                div.appendChild(span);
+
+                var playersDiv = document.getElementById("playersDiv");
+                playersDiv.appendChild(div);
+            }
+
+
+            function updatePlayerDiv(player) {
+                player.getJQueryDiv().find(".playerImage")
+                    .attr("src", player.profilePicture);
+
+                player.getJQueryDiv().find(".playerNickname")
+                    .html(player.nickname);
+            }
+
+
+            function setPlayerTeam(device_id, team) {
+                var player = players.find(e => e.device_id == device_id);
+
+                if (player == undefined) { return; }
+
+                player.team = team;
+
+                var playerDiv = document.getElementById(player.getDivID());
+                // remove from previous div
+                playerDiv.parentNode.removeChild(playerDiv);
+
+                var teamDivID = team == Team.RED ? "redTeamDiv" : "blueTeamDiv"
+                // move to team div
+                var teamDiv = document.getElementById(teamDivID);
+                teamDiv.appendChild(playerDiv);
+
+                changeElementToTeamColor(playerDiv, team);
+            }
+
+
+            function log(logMessage) {
+                var log = document.getElementById("log");
+                log.appendChild(document.createTextNode(logMessage));
+                log.appendChild(document.createElement("br"));
+            }
+        </script>
+
+        
+    </body>
+</html>
