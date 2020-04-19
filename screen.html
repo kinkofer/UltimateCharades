@@ -26,6 +26,9 @@
         <div id="Lobby" class="view default-view">
             <h1>Ultimate Charades</h1>
 
+            <div id="readyDiv" style="display: none;">
+                <h2>Everyone is ready!</h2>
+            </div>
             <div id="playersDiv">
                 <h2>Waiting for...</h2>
             </div>
@@ -45,11 +48,6 @@
             var airconsole;
             var viewManager = null;
             var players = [];
-
-
-            
-
-            
 
 
             function init() {
@@ -98,8 +96,16 @@
                 };
 
                 airconsole.onCustomDeviceStateChange = function(device_id, data) {
-                    if (data.team) {
+                    var player = players.find(e => e.device_id == device_id);
+
+                    if (player == undefined) { return; }
+
+                    if ('team' in data && player.team != data.team) {
                         setPlayerTeam(device_id, data.team);
+                    }
+                    
+                    if ('state' in data && player.state != data.state) {
+                        setPlayerState(device_id, data.state);
                     }
 
                     viewManager.onViewChange(data, function(view_id) {
@@ -148,10 +154,15 @@
                 img.src = player.profilePicture;
                 div.appendChild(img);
 
-                var span = document.createElement("span");
-                span.className = "playerNickname";
-                span.innerText = player.nickname
-                div.appendChild(span);
+                var nicknameSpan = document.createElement("span");
+                nicknameSpan.className = "playerNickname";
+                nicknameSpan.innerText = player.nickname
+                div.appendChild(nicknameSpan);
+
+                var stateSpan = document.createElement("span");
+                stateSpan.className = "playerState";
+                stateSpan.innerText = player.state == PlayerState.READY ? "...Ready!" : "...";
+                div.appendChild(stateSpan);
 
                 var playersDiv = document.getElementById("playersDiv");
                 playersDiv.appendChild(div);
@@ -164,6 +175,10 @@
 
                 player.getJQueryDiv().find(".playerNickname")
                     .html(player.nickname);
+
+                var state = player.state == PlayerState.READY ? "...Ready!" : "...";
+                player.getJQueryDiv().find(".playerState")
+                    .html(state);
             }
 
 
@@ -178,12 +193,35 @@
                 // remove from previous div
                 playerDiv.parentNode.removeChild(playerDiv);
 
-                var teamDivID = team == Team.RED ? "redTeamDiv" : "blueTeamDiv"
+                var teamDivID = team == Team.RED ? "redTeamDiv" : "blueTeamDiv";
                 // move to team div
                 var teamDiv = document.getElementById(teamDivID);
                 teamDiv.appendChild(playerDiv);
 
                 changeElementToTeamColor(playerDiv, team);
+            }
+
+
+            function setPlayerState(device_id, state) {
+                var player = players.find(e => e.device_id == device_id);
+                player.team = Team.RED;
+                if (player == undefined) { return; }
+                
+                player.state = state;
+
+                refreshPlayers();
+
+                if (state == PlayerState.READY) {
+                    checkPlayerStates();
+                }
+            }
+
+
+            function checkPlayerStates() {
+                var unreadyPlayer = players.find(e => e.state != PlayerState.READY);
+                if (unreadyPlayer != undefined) { return }
+
+                $('#readyDiv').show()
             }
 
 

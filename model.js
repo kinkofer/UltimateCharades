@@ -5,6 +5,14 @@ const Team = {
 };
 Object.freeze(Team);
 
+const PlayerState = {
+    NONE: 0,
+    READY: 1,
+    NOT_READY: 2
+};
+Object.freeze(PlayerState);
+
+
 function changeElementToTeamColor(e, team) {
     var teamClass = "noTeam";
     if (team == Team.RED) {
@@ -24,6 +32,7 @@ class Player {
         this.profilePicture = profilePicture;
         this.nickname = nickname;
         this.team = Team.NONE;
+        this.state = PlayerState.NONE;
     }
 
     getDivID() {

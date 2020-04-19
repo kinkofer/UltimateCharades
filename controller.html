@@ -16,20 +16,13 @@
         </style>
     </head>
     <body onload="init()">
-        <div id="top" style="padding-top: 30px;"></div>
+        <div id="top" style="padding-top: 10px;"></div>
 
 
         <div id="PlayerStart" class="view default-view">
-            <div>
-                <h1>Welcome</h1>
-                <div id="playerDiv">
-                    <img src="" id="playerImage" />
-                    <span id="playerNickname"></span>
-                </div>
-            </div>
-            <div>
-                <h1>Ready to start?</h1>
-                <button id="startBtn">Start</button>
+            <div id="playerDiv">
+                <img src="" id="playerImage" />
+                <span id="playerNickname"></span>
             </div>
             <div id="teamDiv" class="noTeam">
                 <h1>Choose your team</h1>
@@ -45,6 +38,11 @@
                     <span id="phrasesSubmittedTxt">0</span>
                 </p>
             </div>
+            <div id="readyDiv">
+                <h1>Ready to start?</h1>
+                <p id="readyTeamError" class="errorMessage" style="display: none;"><em>Choose a team first</em></p>
+                <button id="readyBtn">Ready</button>
+            </div>
         </div>
         
         
@@ -57,19 +55,23 @@
             function init() {
                 airconsole = new AirConsole();
 
-                // var teamDiv = document.getElementById("teamDiv");
-
                 // When we press our button, we send a message to the screen
-                $('#redTeamBtn').click(function () {
+                $('#redTeamBtn').click(function() {
+                    player.team = Team.RED;
                     airconsole.setCustomDeviceStateProperty("team", Team.RED);
                     changeElementToTeamColor($("#teamDiv").get(0), Team.RED);
-                    // airconsole.message(AirConsole.SCREEN, "How are you?");
+                    $('#readyTeamError').hide();
                 });
 
-                $('#blueTeamBtn').click(function () {
+                $('#blueTeamBtn').click(function() {
+                    player.team = Team.BLUE;
                     airconsole.setCustomDeviceStateProperty("team", Team.BLUE);
                     changeElementToTeamColor($("#teamDiv").get(0), Team.BLUE);
-                    // airconsole.message(AirConsole.SCREEN, "How are you?");
+                    $('#readyTeamError').hide();
+                });
+
+                $('#readyBtn').click(function() {
+                    readyPlayer();
                 });
 
 
@@ -84,6 +86,7 @@
                     updatePlayerDiv();
                 };
 
+
                 airconsole.onDeviceStateChange = function(device_id, user_data) {
                     if (device_id == player.device_id) {
                         player.profilePicture = airconsole.getProfilePicture(device_id);
@@ -95,7 +98,6 @@
 
                 // Listen for messages
                 airconsole.onMessage = function (from, data) {
-
                     // Show message on device screen
                     // var info = document.createElement('DIV');
                     // info.innerHTML = data;
@@ -105,8 +107,35 @@
 
 
             function updatePlayerDiv() {
-                $("#playerImage").attr("src", player.profilePicture)
+                $("#playerImage").attr("src", player.profilePicture);
                 $("#playerNickname").html(player.nickname);
+            }
+
+
+            function readyPlayer() {
+                if (player.team == Team.NONE) {
+                    $('#readyTeamError').show();
+                    return;
+                }
+                else {
+                    $('#readyTeamError').hide();
+                }
+
+                if (player.state != PlayerState.READY) {
+                    player.state = PlayerState.READY;
+                    airconsole.setCustomDeviceStateProperty("state", PlayerState.READY);
+                    
+                    $('#readyDiv').find("h1").html("Waiting for other players");
+                    $('#readyDiv').find("button").html("Cancel");
+                }
+                else {
+                    // Player canceled
+                    player.state = PlayerState.NOT_READY;
+                    airconsole.setCustomDeviceStateProperty("state", PlayerState.NOT_READY);
+                    
+                    $('#readyDiv').find("h1").html("Ready to start?");
+                    $('#readyDiv').find("button").html("Ready");
+                }
             }
         </script>
     </body>
