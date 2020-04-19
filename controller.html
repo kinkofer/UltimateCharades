@@ -2,16 +2,29 @@
     <head>
         <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.7.0.js"></script>
         <script type="text/javascript" src="airconsole-view-manager.js"></script>
+        <script type="text/javascript" src="airconsole-events.js"></script>
+        <script type="text/javascript" src="airconsole-keyboard.js"></script>
         <script type="text/javascript" src="model.js"></script>
         <script type="text/javascript" src="jquery-3.5.0.min.js"></script>
+
         <link rel="stylesheet" type="text/css" href="style.css" />
+        <link rel="stylesheet" type="text/css" href="airconsole-keyboard.css" />
 
         <style>
             body { color: whitesmoke; }
+            
             #playerDiv { 
                 vertical-align: middle;
                 font-size: xx-large;
                 padding: 10px;
+            }
+
+            .textfield {
+                display: inline-block;
+                border: 1px solid #888888;
+                width: 200px;
+                padding: 4px;
+                min-height: 18px;
             }
         </style>
     </head>
@@ -31,48 +44,57 @@
             </div>
             <div>
                 <h1>Enter your phrases:</h1>
-                <input type="text" />
+                <div class="textfield" id="phraseTxt">
+                    <div style="color:#aaa"><i>ex. A bird in the hand is worth two in the bush</i></div>
+                </div>
                 <button id="phraseBtn">Submit</button>
                 <p>
                     <span>Phrases submitted:</span>
-                    <span id="phrasesSubmittedTxt">0</span>
+                    <span id="phrasesSubmittedLbl">0</span>
                 </p>
             </div>
             <div id="readyDiv">
                 <h1>Ready to start?</h1>
                 <p id="readyTeamError" class="errorMessage" style="display: none;"><em>Choose a team first</em></p>
+                <p id="readyPhrasesError" class="errorMessage" style="display: none;"><em>Submit at least 3 phrases</em></p>
                 <button id="readyBtn">Ready</button>
             </div>
+            <div id="keyboard"></div>
         </div>
+
+
+        <div id="RoundOne" class="view">
+            <div id="phrasesDiv">
+
+            </div>
+        </div>
+
         
         
         <script type="text/javascript">
             var airconsole;
             var viewManager = null;
+            var keyboard;
 
             var player;
+            var phrasesSubmitted = 0;
+
+            var charades = [];
+
 
             function init() {
                 airconsole = new AirConsole();
 
-                // When we press our button, we send a message to the screen
-                $('#redTeamBtn').click(function() {
-                    player.team = Team.RED;
-                    airconsole.setCustomDeviceStateProperty("team", Team.RED);
-                    changeElementToTeamColor($("#teamDiv").get(0), Team.RED);
-                    $('#readyTeamError').hide();
-                });
+                keyboard = new AirConsoleKeyboard("keyboard");
+                keyboard.bind("phraseTxt");
 
-                $('#blueTeamBtn').click(function() {
-                    player.team = Team.BLUE;
-                    airconsole.setCustomDeviceStateProperty("team", Team.BLUE);
-                    changeElementToTeamColor($("#teamDiv").get(0), Team.BLUE);
-                    $('#readyTeamError').hide();
-                });
 
-                $('#readyBtn').click(function() {
-                    readyPlayer();
-                });
+                $('#redTeamBtn').click(_ => setPlayerTeam(Team.RED));
+                $('#blueTeamBtn').click(_ => setPlayerTeam(Team.BLUE));
+
+                $('#readyBtn').click(readyPlayer);
+
+                $('#phraseBtn').click(sendPhrase);
 
 
                 airconsole.onReady = function(code) {
@@ -96,13 +118,36 @@
                     }
                 };
 
-                // Listen for messages
-                airconsole.onMessage = function (from, data) {
-                    // Show message on device screen
-                    // var info = document.createElement('DIV');
-                    // info.innerHTML = data;
-                    // document.body.appendChild(info);
+
+                airconsole.onCustomDeviceStateChange = function(device_id, data) {
+                    viewManager.onViewChange(data, function(view_id) {
+                        if (view_id == "RoundOne") {
+
+                        }
+                    });
                 };
+
+
+                airconsole.onMessage = function(device_id, data) {
+                    this.dispatchEvent(device_id, data);
+                };
+
+
+                airconsole.on(UCEvent.SEND_CHARADES, function(device_id, data, context) {
+                    charades = data;
+                    // FIXME: Remove after testing
+                    showPhrases();
+                });
+            }
+
+            
+            // - Player Start
+
+            function setPlayerTeam(team) {
+                player.team = team;
+                airconsole.setCustomDeviceStateProperty("team", team);
+                changeElementToTeamColor($("#teamDiv").get(0), team);
+                $('#readyTeamError').hide();
             }
 
 
@@ -113,6 +158,7 @@
 
 
             function readyPlayer() {
+                // Check player team
                 if (player.team == Team.NONE) {
                     $('#readyTeamError').show();
                     return;
@@ -121,12 +167,24 @@
                     $('#readyTeamError').hide();
                 }
 
+                // Check submitted phrases
+                if (phrasesSubmitted < 3) {
+                    $('#readyPhrasesError').show();
+                    return;
+                }
+                else {
+                    $('#readyPhrasesError').hide();
+                }
+
+                // Set state
                 if (player.state != PlayerState.READY) {
                     player.state = PlayerState.READY;
                     airconsole.setCustomDeviceStateProperty("state", PlayerState.READY);
                     
                     $('#readyDiv').find("h1").html("Waiting for other players");
                     $('#readyDiv').find("button").html("Cancel");
+
+                    // TODO: Disable team selection and phrases
                 }
                 else {
                     // Player canceled
@@ -135,7 +193,43 @@
                     
                     $('#readyDiv').find("h1").html("Ready to start?");
                     $('#readyDiv').find("button").html("Ready");
+
+                    // TODO: Enable team selection and phrases
                 }
+            }
+
+
+            // - Round One
+
+            function showPhrases() {
+                var phrases = charades.map(e => e.phrase);
+
+                if (phrases.length == 0) { return; }
+                
+                var ul = $("<ul></ul>");
+                ul.appendTo('#phrasesDiv');
+
+                var listItems = phrases.map(e => "<li>" + e + "</li>");
+                
+                ul.append( listItems.join( "" ) );
+            }
+
+
+            // - Actions
+
+            function sendPhrase() {
+                let phrase = keyboard.valueText('phraseTxt');
+
+                if (phrase == "") { return }
+
+                airconsole.sendEvent(AirConsole.SCREEN, UCEvent.SEND_PHRASE, { "phrase": phrase });
+
+                phrasesSubmitted++;
+                $('#phrasesSubmittedLbl').html(phrasesSubmitted);
+
+                keyboard.setValue("phraseTxt", "");
+
+                // TODO: Implement phrase editing
             }
         </script>
     </body>

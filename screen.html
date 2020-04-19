@@ -2,6 +2,7 @@
     <head>
         <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.7.0.js"></script>
         <script type="text/javascript" src="airconsole-view-manager.js"></script>
+        <script type="text/javascript" src="airconsole-events.js"></script>
         <script type="text/javascript" src="model.js"></script>
         <script type="text/javascript" src="jquery-3.5.0.min.js"></script>
         <link rel="stylesheet" type="text/css" href="style.css" />
@@ -28,6 +29,7 @@
 
             <div id="readyDiv" style="display: none;">
                 <h2>Everyone is ready!</h2>
+                <button id="startBtn">Start Game</button>
             </div>
             <div id="playersDiv">
                 <h2>Waiting for...</h2>
@@ -43,16 +45,28 @@
         </div>
 
 
+        <div id="RoundOne" class="view">
+            <h1>Ultimate Charades</h1>
+
+            <div id="phrases">
+
+            </div>
+        </div>
+
+
         
         <script type="text/javascript">
             var airconsole;
             var viewManager = null;
             var players = [];
 
+            var charades = [];
+
 
             function init() {
                 airconsole = new AirConsole();
                 
+                $('#startBtn').click(startGame);
 
                 airconsole.onReady = function(code) {
                     viewManager = new AirConsoleViewManager(airconsole);
@@ -64,6 +78,7 @@
                 airconsole.onConnect = function(device_id) {
                     if (players.some(e => e.device_id == device_id)) {
                         // Existing player detected
+                        refreshPlayers();
                         return
                     }
 
@@ -71,6 +86,8 @@
                     var nickname = airconsole.getNickname(device_id);
                     var newPlayer = new Player(device_id, profilePicture, nickname);
                     players.push(newPlayer);
+
+                    $('#readyDiv').hide();
                     
                     refreshPlayers();
                 };
@@ -95,6 +112,7 @@
                     refreshPlayers();
                 };
 
+
                 airconsole.onCustomDeviceStateChange = function(device_id, data) {
                     var player = players.find(e => e.device_id == device_id);
 
@@ -103,28 +121,25 @@
                     if ('team' in data && player.team != data.team) {
                         setPlayerTeam(device_id, data.team);
                     }
-                    
+
                     if ('state' in data && player.state != data.state) {
                         setPlayerState(device_id, data.state);
                     }
 
-                    viewManager.onViewChange(data, function(view_id) {
+                    // viewManager.onViewChange(data, function(view_id) {
 
-                    });
+                    // });
                 };
 
 
-                // Listen for messages from other devices
                 airconsole.onMessage = function (device_id, data) {
-                    // We receive a message -> Send message back to the device
-                    // airconsole.message(from, "Full of pixels!");
-
-                    // // Show message on device screen
-                    // var info = document.createElement('div');
-                    // info.innerHTML = data;
-                    // document.body.appendChild(info);
-
+                    this.dispatchEvent(device_id, data);
                 };
+
+
+                airconsole.on(UCEvent.SEND_PHRASE, function(device_id, data, context) {
+                    charades.push(new Charade(data.phrase));
+                });
             }
 
 
@@ -221,7 +236,13 @@
                 var unreadyPlayer = players.find(e => e.state != PlayerState.READY);
                 if (unreadyPlayer != undefined) { return }
 
-                $('#readyDiv').show()
+                $('#readyDiv').show();
+            }
+
+
+            function startGame() {
+                viewManager.controllersShow("RoundOne");
+                airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
             }
 
 

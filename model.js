@@ -1,16 +1,40 @@
+// 100
 const Team = {
-    NONE: 0,
-    RED: 1,
-    BLUE: 2
+    NONE: 100,
+    RED: 101,
+    BLUE: 102
 };
 Object.freeze(Team);
 
+// 200
 const PlayerState = {
-    NONE: 0,
-    READY: 1,
-    NOT_READY: 2
+    NONE: 200,
+    READY: 201,
+    NOT_READY: 202
 };
 Object.freeze(PlayerState);
+
+// 300
+const UCEvent = {
+    SEND_PHRASE: 300,
+    SEND_CHARADES: 301
+};
+Object.freeze(UCEvent);
+
+// 400
+const Round = {
+    ONE: 400,
+    TWO: 401,
+    THREE: 402
+};
+Object.freeze(Round);
+
+// 500
+const CharadeState = {
+    NEW: 500,
+    GUESSED: 501
+};
+Object.freeze(CharadeState);
 
 
 function changeElementToTeamColor(e, team) {
@@ -41,5 +65,13 @@ class Player {
 
     getJQueryDiv() {
         return $("#" + this.getDivID());
+    }
+}
+
+
+class Charade {
+    constructor(phrase) {
+        this.phrase = phrase;
+        this.state = CharadeState.NEW;
     }
 }
