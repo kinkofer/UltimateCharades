@@ -10,7 +10,8 @@ Object.freeze(Team);
 const PlayerState = {
     NONE: 200,
     READY: 201,
-    NOT_READY: 202
+    NOT_READY: 202,
+    WAITING_TURN: 203
 };
 Object.freeze(PlayerState);
 
@@ -23,9 +24,10 @@ Object.freeze(UCEvent);
 
 // 400
 const Round = {
-    ONE: 400,
-    TWO: 401,
-    THREE: 402
+    NONE: 400,
+    ONE: 401,
+    TWO: 402,
+    THREE: 403
 };
 Object.freeze(Round);
 
@@ -35,6 +37,17 @@ const CharadeState = {
     GUESSED: 501
 };
 Object.freeze(CharadeState);
+
+// 600
+const ScreenState = {
+    NEW: 600,
+    READY: 601,
+    WAITING_TURN: 602,
+    TAKING_TURN: 603,
+    ENDING_ROUND: 604,
+    GAME_OVER: 605
+}
+Object.freeze(ScreenState);
 
 
 function changeElementToTeamColor(e, team) {
@@ -49,6 +62,13 @@ function changeElementToTeamColor(e, team) {
     e.className = e.className.replace(/noTeam|redTeam|blueTeam/g, teamClass);
 }
 
+
+class Screen {
+    constructor() {
+        this.state = ScreenState.NEW;
+        this.round = Round.NONE;
+    }
+}
 
 class Player {
     constructor(device_id, profilePicture, nickname) {

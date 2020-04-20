@@ -45,11 +45,56 @@
         </div>
 
 
-        <div id="RoundOne" class="view">
+        <div id="Game" class="view">
             <h1>Ultimate Charades</h1>
+            <div id="gameRoundDiv">
+                <div id="roundOneDiv">
+                    <h1>Round One</h1>
+                    <p>Rule: Speaking only</p>
+                </div>
+                <div id="roundTwoDiv" style="display: none;">
+                    <h1>Round Two</h1>
+                    <p>Rule: Charades, no speaking</p>
+                </div>
+                <div id="roundThreeDiv" style="display: none;">
+                    <h1>Round One</h1>
+                    <p>Rule: One word clues</p>
+                </div>
+            </div>
+            <div id="waitingTurnDiv">
+                <p>Choose a clue giver.</p>
+                <div id="remainingPhrasesDiv"><span id="remainingPhrasesLbl">#</span> out of <span id="totalPhrasesLbl">#</span> phrases remaining in this round.</div>
+            </div>
+            <div id="takingTurnDiv" style="display: none;">
+                <div id="playerTakingTurnDiv">
 
-            <div id="phrases">
+                </div>
+            </div>
+            <div id="endingRoundDiv" style="display: none;">
+                <p>This round has ended. Start next round?</p>
+                <button id="startNextRoundBtn">Start Round</button>
+            </div>
+            <div id="scoreDiv">
+                <h2>Scores</h2>
+                <div>
+                    <h3>Blue Team</h3>
+                    <p id="blueTeamScore"></p>
+                </div>
+                <div>
+                    <h3>Red Team</h3>
+                    <p id="redTeamScore"></p>
+                </div>
+            </div>
+            <div id="teamsDiv">
 
+            </div>
+        </div>
+
+
+        <div id="GameOver" class="view">
+            <h1>Game Over</h1>
+            <div id="finalScoreDiv">
+                <h2>Final Score</h2>
             </div>
         </div>
 
@@ -58,6 +103,8 @@
         <script type="text/javascript">
             var airconsole;
             var viewManager = null;
+
+            var screen;
             var players = [];
 
             var charades = [];
@@ -66,6 +113,8 @@
             function init() {
                 airconsole = new AirConsole();
                 
+                screen = new Screen();
+
                 $('#startBtn').click(startGame);
 
                 airconsole.onReady = function(code) {
@@ -90,6 +139,7 @@
                     $('#readyDiv').hide();
                     
                     refreshPlayers();
+                    checkPlayerStates();
                 };
 
 
@@ -113,7 +163,7 @@
                 };
 
 
-                airconsole.onCustomDeviceStateChange = function(device_id, data) {
+                airconsole.onCustomDeviceStateChange = function (device_id, data) {
                     var player = players.find(e => e.device_id == device_id);
 
                     if (player == undefined) { return; }
@@ -124,6 +174,9 @@
 
                     if ('state' in data && player.state != data.state) {
                         setPlayerState(device_id, data.state);
+                        if (data.state == PlayerState.READY) {
+                            checkPlayerStates();
+                        }
                     }
 
                     // viewManager.onViewChange(data, function(view_id) {
@@ -225,24 +278,80 @@
                 player.state = state;
 
                 refreshPlayers();
-
-                if (state == PlayerState.READY) {
-                    checkPlayerStates();
-                }
             }
 
 
             function checkPlayerStates() {
                 var unreadyPlayer = players.find(e => e.state != PlayerState.READY);
-                if (unreadyPlayer != undefined) { return }
+                if (unreadyPlayer != undefined) { 
+                    setScreenState(ScreenState.NEW);
+                    return 
+                }
 
-                $('#readyDiv').show();
+                // All players ready, change screen state
+                setScreenState(ScreenState.READY);
             }
 
 
             function startGame() {
-                viewManager.controllersShow("RoundOne");
+                screen.round = Round.ONE;
+                airconsole.setCustomDeviceStateProperty("round", Round.ONE);
+
+                setScreenState(ScreenState.WAITING_TURN);
+
+                viewManager.controllersShow("Game");
                 airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
+            }
+
+
+            function updateGame() {
+                // gameRoundDiv
+                (screen.round == Round.ONE) ? $('#roundOneDiv').show() : $('#roundOneDiv').hide();
+                (screen.round == Round.TWO) ? $('#roundTwoDiv').show() : $('#roundTwoDiv').hide();
+                (screen.round == Round.THREE) ? $('#roundThreeDiv').show() : $('#roundThreeDiv').hide();
+
+                // waitingTurnDiv
+                $('#totalPhrasesLbl').html(charades.length);
+                var remainingCharades = charades.filter(e => e.state == CharadeState.NEW);
+                $('#remainingPhrasesLbl').html(remainingCharades.length);
+                
+
+                // takingTurnDiv
+            }
+
+
+            function setScreenState(newState) {
+                var oldState = screen.state;
+                screen.state = newState;
+                airconsole.setCustomDeviceStateProperty("state", newState);
+
+                switch (newState) {
+                    case ScreenState.NEW:
+                        if (oldState == ScreenState.READY) {
+                            // New player joined
+                            $('#readyDiv').hide();
+                        }
+                        else {
+                            // New game
+                        }
+                        break;
+                    case ScreenState.READY:
+                        $('#readyDiv').show();
+                        break;
+                    case ScreenState.WAITING_TURN:
+                        if (oldState == ScreenState.READY) {
+                            // Starting game
+                            $('#Lobby').hide();
+                            $('#Game').show();
+                        }
+                        updateGame();
+
+                        break;
+                    case ScreenState.TAKING_TURN:
+                        break;
+                    case ScreenState.ENDING_ROUND:
+                        break;
+                }
             }
 
 

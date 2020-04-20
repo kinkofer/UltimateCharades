@@ -12,7 +12,7 @@
 
         <style>
             body { color: whitesmoke; }
-            
+
             #playerDiv { 
                 vertical-align: middle;
                 font-size: xx-large;
@@ -26,6 +26,11 @@
                 padding: 4px;
                 min-height: 18px;
             }
+
+            .errorMessage {
+                font-style: italic;
+                color: seagreen;
+            }
         </style>
     </head>
     <body onload="init()">
@@ -33,9 +38,9 @@
 
 
         <div id="PlayerStart" class="view default-view">
-            <div id="playerDiv">
-                <img src="" id="playerImage" />
-                <span id="playerNickname"></span>
+            <div class="playerDiv">
+                <img src="" class="playerImage" />
+                <span class="playerNickname"></span>
             </div>
             <div id="teamDiv" class="noTeam">
                 <h1>Choose your team</h1>
@@ -52,24 +57,70 @@
                     <span>Phrases submitted:</span>
                     <span id="phrasesSubmittedLbl">0</span>
                 </p>
+                <p id="phraseMaxError" class="errorMessage" style="display: none;">You have already submitted the maximum.</p>
             </div>
             <div id="readyDiv">
                 <h1>Ready to start?</h1>
-                <p id="readyTeamError" class="errorMessage" style="display: none;"><em>Choose a team first</em></p>
-                <p id="readyPhrasesError" class="errorMessage" style="display: none;"><em>Submit at least 3 phrases</em></p>
+                <p id="readyTeamError" class="errorMessage" style="display: none;">Choose a team first</p>
+                <p id="readyPhrasesError" class="errorMessage" style="display: none;">Submit at least 3 phrases</p>
                 <button id="readyBtn">Ready</button>
             </div>
             <div id="keyboard"></div>
         </div>
 
 
-        <div id="RoundOne" class="view">
-            <div id="phrasesDiv">
-
+        <div id="Game" class="view">
+            <div class="playerDiv">
+                <img src="" class="playerImage" />
+                <span class="playerNickname"></span>
+            </div>
+            <div id="gameRoundDiv">
+                <div id="roundOneDiv">
+                    <h1>Round One</h1>
+                    <p>Rule: Speaking only</p>
+                </div>
+                <div id="roundTwoDiv" style="display: none;">
+                    <h1>Round Two</h1>
+                    <p>Rule: Charades, no speaking</p>
+                </div>
+                <div id="roundThreeDiv" style="display: none;">
+                    <h1>Round One</h1>
+                    <p>Rule: One word clues</p>
+                </div>
+            </div>
+            <div id="waitingTurnDiv">
+                <button id="startTurnBtn">It's my turn</button>
+                <button id="cancelTurnBtn" style="display: none;">Cancel turn</button>
+                <p id="startTurnError" class="errorMessage" style="display: none;">Someone else is taking their turn</p>
+            </div>
+            <div id="takingTurnDiv" style="display: none;">
+                <button id="startClueGivingBtn">Start clue giving</button>
+                <button id="endTurnBtn" style="display: none;">End turn</button>
+                <div id="phrasesDiv">
+                    <p id="phrase"></p>
+                    <button id="correctBtn">Correct</button>
+                    <button id="passBtn">Pass</button>
+                </div>
+            </div>
+            <div id="guessingDiv" style="display: none;">
+                <p>You are guessing</p>
+            </div>
+            <div id="endingRoundDiv" style="display: none;">
+                <p>This round has ended. Check the score of the screen.</p>
             </div>
         </div>
 
-        
+
+
+
+        <div id="GameOver" class="view">
+            <h1>Game Over</h1>
+            <div id="finalScoreDiv">
+                <h2>Final Score</h2>
+            </div>
+        </div>
+
+
         
         <script type="text/javascript">
             var airconsole;
@@ -80,6 +131,9 @@
             var phrasesSubmitted = 0;
 
             var charades = [];
+
+            var minPhrases = 3;
+            var maxPhrases = 3;
 
 
             function init() {
@@ -120,10 +174,14 @@
 
 
                 airconsole.onCustomDeviceStateChange = function(device_id, data) {
-                    viewManager.onViewChange(data, function(view_id) {
-                        if (view_id == "RoundOne") {
-
+                    if (device_id == AirConsole.SCREEN) {
+                        if (data.round != Round.NONE) {
+                            updateGame();
                         }
+                    }
+
+                    viewManager.onViewChange(data, function(view_id) {
+                        
                     });
                 };
 
@@ -135,8 +193,6 @@
 
                 airconsole.on(UCEvent.SEND_CHARADES, function(device_id, data, context) {
                     charades = data;
-                    // FIXME: Remove after testing
-                    showPhrases();
                 });
             }
 
@@ -152,8 +208,8 @@
 
 
             function updatePlayerDiv() {
-                $("#playerImage").attr("src", player.profilePicture);
-                $("#playerNickname").html(player.nickname);
+                $(".playerImage").attr("src", player.profilePicture);
+                $(".playerNickname").html(player.nickname);
             }
 
 
@@ -168,12 +224,13 @@
                 }
 
                 // Check submitted phrases
-                if (phrasesSubmitted < 3) {
+                if (!(phrasesSubmitted >= minPhrases)) {
                     $('#readyPhrasesError').show();
                     return;
                 }
                 else {
                     $('#readyPhrasesError').hide();
+                    $('#phraseMaxError').hide();
                 }
 
                 // Set state
@@ -199,8 +256,18 @@
             }
 
 
-            // - Round One
+            // - Game
 
+            function updateGame() {
+                var screen = airconsole.getCustomDeviceState(AirConsole.SCREEN);
+                (screen.round == Round.ONE) ? $('#roundOneDiv').show() : $('#roundOneDiv').hide();
+                (screen.round == Round.TWO) ? $('#roundTwoDiv').show() : $('#roundTwoDiv').hide();
+                (screen.round == Round.THREE) ? $('#roundThreeDiv').show() : $('#roundThreeDiv').hide();
+
+
+            }
+
+            // For testing only
             function showPhrases() {
                 var phrases = charades.map(e => e.phrase);
 
@@ -218,9 +285,17 @@
             // - Actions
 
             function sendPhrase() {
+                if (phrasesSubmitted == maxPhrases) {
+                    $('#phraseMaxError').show();
+                    return;
+                }
+                else {
+                    $('#phraseMaxError').hide();
+                }
+
                 let phrase = keyboard.valueText('phraseTxt');
 
-                if (phrase == "") { return }
+                if (phrase == "") { return; }
 
                 airconsole.sendEvent(AirConsole.SCREEN, UCEvent.SEND_PHRASE, { "phrase": phrase });
 
