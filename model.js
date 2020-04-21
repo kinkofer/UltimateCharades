@@ -11,7 +11,11 @@ const PlayerState = {
     NONE: 200,
     READY: 201,
     NOT_READY: 202,
-    WAITING_TURN: 203
+    WAITING_TURN: 203,
+    TAKING_TURN: 204,
+    GUESSING: 205,
+    WAITING_FOR_NEXT_ROUND: 206,
+    GAME_OVER: 207
 };
 Object.freeze(PlayerState);
 
@@ -50,17 +54,6 @@ const ScreenState = {
 Object.freeze(ScreenState);
 
 
-function changeElementToTeamColor(e, team) {
-    var teamClass = "noTeam";
-    if (team == Team.RED) {
-        teamClass = "redTeam";
-    }
-    else if (team == Team.BLUE) {
-        teamClass = "blueTeam";
-    }
-
-    e.className = e.className.replace(/noTeam|redTeam|blueTeam/g, teamClass);
-}
 
 
 class Screen {
@@ -93,5 +86,6 @@ class Charade {
     constructor(phrase) {
         this.phrase = phrase;
         this.state = CharadeState.NEW;
+        this.team = Team.NONE;
     }
 }

@@ -4,6 +4,7 @@
         <script type="text/javascript" src="airconsole-view-manager.js"></script>
         <script type="text/javascript" src="airconsole-events.js"></script>
         <script type="text/javascript" src="airconsole-keyboard.js"></script>
+        <script type="text/javascript" src="utilities.js"></script>
         <script type="text/javascript" src="model.js"></script>
         <script type="text/javascript" src="jquery-3.5.0.min.js"></script>
 
@@ -74,43 +75,75 @@
                 <img src="" class="playerImage" />
                 <span class="playerNickname"></span>
             </div>
-            <div id="gameRoundDiv">
-                <div id="roundOneDiv">
-                    <h1>Round One</h1>
-                    <p>Rule: Speaking only</p>
-                </div>
-                <div id="roundTwoDiv" style="display: none;">
-                    <h1>Round Two</h1>
-                    <p>Rule: Charades, no speaking</p>
-                </div>
-                <div id="roundThreeDiv" style="display: none;">
-                    <h1>Round One</h1>
-                    <p>Rule: One word clues</p>
-                </div>
+            <div class="gameRoundDiv">
+                <h2 class="roundLbl">Round One</h2>
+                <p class="ruleLbl">Rule: Speaking only</p>
             </div>
+
             <div id="waitingTurnDiv">
                 <button id="startTurnBtn">It's my turn</button>
-                <button id="cancelTurnBtn" style="display: none;">Cancel turn</button>
                 <p id="startTurnError" class="errorMessage" style="display: none;">Someone else is taking their turn</p>
-            </div>
-            <div id="takingTurnDiv" style="display: none;">
-                <button id="startClueGivingBtn">Start clue giving</button>
-                <button id="endTurnBtn" style="display: none;">End turn</button>
-                <div id="phrasesDiv">
-                    <p id="phrase"></p>
-                    <button id="correctBtn">Correct</button>
-                    <button id="passBtn">Pass</button>
-                </div>
-            </div>
-            <div id="guessingDiv" style="display: none;">
-                <p>You are guessing</p>
-            </div>
-            <div id="endingRoundDiv" style="display: none;">
-                <p>This round has ended. Check the score of the screen.</p>
             </div>
         </div>
 
 
+
+        <div id="TakingTurn" class="view">
+            <div class="playerDiv">
+                <img src="" class="playerImage" />
+                <span class="playerNickname"></span>
+            </div>
+            <div class="gameRoundDiv">
+                <h2 class="roundLbl">Round One</h2>
+                <p class="ruleLbl">Rule: Speaking only</p>
+            </div>
+
+            <div id="confirmTakingTurnDiv">
+                <p>Press start when the time keeper tells you.</p>
+                <button id="startClueGivingBtn">Start clue giving</button>
+                <button id="cancelTurnBtn">Cancel turn</button>
+            </div>
+            <div id="takingTurnDiv" style="display: none;">
+                <button id="endTurnBtn">End turn</button>
+                <div id="phrasesDiv">
+                    <p id="phrase"></p>
+                    <button id="correctBtn">Correct</button>
+                    <button id="passBtn" style="display: none;">Pass</button>
+                </div>
+            </div>
+        </div>
+
+
+        <div id="Guessing" class="view">
+            <div class="playerDiv">
+                <img src="" class="playerImage" />
+                <span class="playerNickname"></span>
+            </div>
+            <div class="gameRoundDiv">
+                <h2 class="roundLbl">Round One</h2>
+                <p class="ruleLbl">Rule: Speaking only</p>
+            </div>
+
+            <div id="guessingDiv">
+                <p>You are guessing</p>
+            </div>
+        </div>
+
+
+        <div id="EndingRound" class="view">
+            <div class="playerDiv">
+                <img src="" class="playerImage" />
+                <span class="playerNickname"></span>
+            </div>
+            <div class="gameRoundDiv">
+                <h2 class="roundLbl">Round One</h2>
+                <p class="ruleLbl">Rule: Speaking only</p>
+            </div>
+
+            <div id="endingRoundDiv">
+                <p>This round has ended. Check the score of the screen.</p>
+            </div>
+        </div>
 
 
         <div id="GameOver" class="view">
@@ -122,6 +155,7 @@
 
 
         
+
         <script type="text/javascript">
             var airconsole;
             var viewManager = null;
@@ -131,9 +165,12 @@
             var phrasesSubmitted = 0;
 
             var charades = [];
+            var currentCharade = null;
 
-            var minPhrases = 3;
+            var minPhrases = 1;
             var maxPhrases = 3;
+
+            var takingTurnDeviceID = null;
 
 
             function init() {
@@ -150,6 +187,13 @@
 
                 $('#phraseBtn').click(sendPhrase);
 
+                $('#startTurnBtn').click(_ => setPlayerState(PlayerState.TAKING_TURN));
+
+                $('#startClueGivingBtn').click(startTurn);
+                $('#cancelTurnBtn').click(_ => setPlayerState(PlayerState.WAITING_TURN));
+
+                $('#endTurnBtn').click(endTurn);
+                $('#correctBtn').click(guessCurrentPhrase);
 
                 airconsole.onReady = function(code) {
                     viewManager = new AirConsoleViewManager(airconsole);
@@ -178,11 +222,23 @@
                         if (data.round != Round.NONE) {
                             updateGame();
                         }
+
+                        if (player.state == PlayerState.WAITING_FOR_NEXT_ROUND &&
+                            data.state == ScreenState.WAITING_TURN) {
+                            // Next round
+                            setPlayerState(PlayerState.WAITING_TURN);
+                        }
+                        else if (player.state == PlayerState.GAME_OVER &&
+                            data.state == ScreenState.NEW) {
+                            // New game
+                            setPlayerState(PlayerState.NONE);
+                        }
+                    }
+                    else if ("state" in data) {
+                        playerDidChangeState(device_id, data.state);
                     }
 
-                    viewManager.onViewChange(data, function(view_id) {
-                        
-                    });
+                    viewManager.onViewChange(data, function(view_id) { });
                 };
 
 
@@ -235,23 +291,76 @@
 
                 // Set state
                 if (player.state != PlayerState.READY) {
-                    player.state = PlayerState.READY;
-                    airconsole.setCustomDeviceStateProperty("state", PlayerState.READY);
-                    
-                    $('#readyDiv').find("h1").html("Waiting for other players");
-                    $('#readyDiv').find("button").html("Cancel");
-
-                    // TODO: Disable team selection and phrases
+                    setPlayerState(PlayerState.READY);
                 }
                 else {
                     // Player canceled
-                    player.state = PlayerState.NOT_READY;
-                    airconsole.setCustomDeviceStateProperty("state", PlayerState.NOT_READY);
-                    
-                    $('#readyDiv').find("h1").html("Ready to start?");
-                    $('#readyDiv').find("button").html("Ready");
+                    setPlayerState(PlayerState.NOT_READY);
+                }
+            }
 
-                    // TODO: Enable team selection and phrases
+
+            function setPlayerState(newState) {
+                var oldState = player.state;
+                player.state = newState;
+                airconsole.setCustomDeviceStateProperty("state", newState);
+
+                switch (newState) {
+                    case PlayerState.NONE:
+                        // New game
+                        viewManager.show('PlayerStart');
+                        break;
+                    case PlayerState.READY:
+                        $('#readyDiv').find("h1").html("Waiting for other players");
+                        $('#readyDiv').find("button").html("Cancel");
+
+                        // TODO: Disable team selection and phrases
+                        break;
+                    case PlayerState.NOT_READY:
+                        $('#readyDiv').find("h1").html("Ready to start?");
+                        $('#readyDiv').find("button").html("Ready");
+
+                        // TODO: Enable team selection and phrases
+                        break;
+                    case PlayerState.WAITING_TURN:
+                        // viewManager.show("Game");
+                        updateGame();
+                        break;
+                    case PlayerState.TAKING_TURN:
+                        viewManager.show("TakingTurn");
+                        break;
+                    case PlayerState.GUESSING:
+                        viewManager.show("Guessing");
+                        break;
+                    case PlayerState.WAITING_FOR_NEXT_ROUND:
+                        viewManager.show("EndingRound");
+                        updateGame();
+                        break;
+                }
+            }
+
+
+            function playerDidChangeState(device_id, state) {
+                if (state == PlayerState.TAKING_TURN) {
+                    takingTurnDeviceID = device_id;
+                    setPlayerState(PlayerState.GUESSING);
+                }
+                else if (takingTurnDeviceID != null &&
+                    takingTurnDeviceID == device_id &&
+                    state == PlayerState.WAITING_TURN) {
+                    // Other player is finished taking their turn
+                    takingTurnDeviceID = null;
+                    setPlayerState(PlayerState.WAITING_TURN);
+                }
+                else if (state == PlayerState.WAITING_FOR_NEXT_ROUND) {
+                    // Other player finished the round
+                    takingTurnDeviceID = null;
+                    setPlayerState(PlayerState.WAITING_FOR_NEXT_ROUND);
+                }
+                else if (state == PlayerState.GAME_OVER) {
+                    // Other player ended the game
+                    takingTurnDeviceID = null;
+                    setPlayerState(PlayerState.GAME_OVER);
                 }
             }
 
@@ -260,12 +369,88 @@
 
             function updateGame() {
                 var screen = airconsole.getCustomDeviceState(AirConsole.SCREEN);
-                (screen.round == Round.ONE) ? $('#roundOneDiv').show() : $('#roundOneDiv').hide();
-                (screen.round == Round.TWO) ? $('#roundTwoDiv').show() : $('#roundTwoDiv').hide();
-                (screen.round == Round.THREE) ? $('#roundThreeDiv').show() : $('#roundThreeDiv').hide();
 
+                var roundLbl = "Round One";
+                var ruleLbl = "Rule: Speaking only";
 
+                if (screen.round == Round.TWO) {
+                    roundLbl = "Round Two";
+                    ruleLbl = "Rule: Charades, no talking";
+                }
+                else if (screen.round == Round.THREE) {
+                    roundLbl = "Round Three";
+                    ruleLbl = "Rule: One word clue";
+                }
+
+                $('.roundLbl').html(roundLbl);
+                $('.ruleLbl').html(ruleLbl);
             }
+
+
+            function startTurn() {
+                $('#confirmTakingTurnDiv').hide();
+                $('#takingTurnDiv').show();
+
+                charades = shuffle(charades);
+
+                // showPhrases();
+                showNextPhrase();
+            }
+
+
+            function guessCurrentPhrase() {
+                currentCharade.state = CharadeState.GUESSED;
+                currentCharade.team = player.team;
+                showNextPhrase();
+            }
+
+
+            function showNextPhrase() {
+                let unguessedCharades = charades.filter(e => e.state == CharadeState.NEW);
+
+                if (unguessedCharades.length == 0) {
+                    endRound();
+                }
+                else {
+                    currentCharade = unguessedCharades[0];
+                    $('#phrase').html(currentCharade.phrase);
+                }
+            }
+
+
+            function endTurn() {
+                currentCharade = null;
+
+                // Send results
+                airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
+
+                // Back to player turn select
+                setPlayerState(PlayerState.WAITING_TURN);
+            }
+
+
+            function endRound() {
+                currentCharade = null;
+
+                // Send results
+                airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
+
+                // Check for end game
+                var screen = airconsole.getCustomDeviceState(AirConsole.SCREEN);
+                if (screen.round != Round.THREE) {
+                    setPlayerState(PlayerState.WAITING_FOR_NEXT_ROUND);
+                }
+                else {
+                    endGame();
+                }
+            }
+
+
+            function endGame() {
+                setPlayerState(PlayerState.GAME_OVER);
+                viewManager.allShow("GameOver");
+            }
+
 
             // For testing only
             function showPhrases() {

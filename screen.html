@@ -3,19 +3,24 @@
         <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.7.0.js"></script>
         <script type="text/javascript" src="airconsole-view-manager.js"></script>
         <script type="text/javascript" src="airconsole-events.js"></script>
+        <script type="text/javascript" src="utilities.js"></script>
         <script type="text/javascript" src="model.js"></script>
         <script type="text/javascript" src="jquery-3.5.0.min.js"></script>
         <link rel="stylesheet" type="text/css" href="style.css" />
 
         <style>
             body { color: whitesmoke; }
-            /* #playersDiv { } */
+
             .playerDiv { 
                 width: 40%;
                 border: 3px solid black;
                 vertical-align: middle;
                 font-size: xx-large;
                 padding: 10px;
+            }
+
+            #scoreDiv {
+                width: 40%;
             }
         </style>
     </head>
@@ -27,6 +32,10 @@
         <div id="Lobby" class="view default-view">
             <h1>Ultimate Charades</h1>
 
+            <div>
+                <p>Join a team and submit your phrases.</p>
+                <p>Phrases submitted: <span id="phrasesSubmittedLbl">0</span></p>
+            </div>
             <div id="readyDiv" style="display: none;">
                 <h2>Everyone is ready!</h2>
                 <button id="startBtn">Start Game</button>
@@ -49,15 +58,15 @@
             <h1>Ultimate Charades</h1>
             <div id="gameRoundDiv">
                 <div id="roundOneDiv">
-                    <h1>Round One</h1>
+                    <h2>Round One</h2>
                     <p>Rule: Speaking only</p>
                 </div>
                 <div id="roundTwoDiv" style="display: none;">
-                    <h1>Round Two</h1>
+                    <h2>Round Two</h2>
                     <p>Rule: Charades, no speaking</p>
                 </div>
                 <div id="roundThreeDiv" style="display: none;">
-                    <h1>Round One</h1>
+                    <h2>Round One</h2>
                     <p>Rule: One word clues</p>
                 </div>
             </div>
@@ -66,8 +75,9 @@
                 <div id="remainingPhrasesDiv"><span id="remainingPhrasesLbl">#</span> out of <span id="totalPhrasesLbl">#</span> phrases remaining in this round.</div>
             </div>
             <div id="takingTurnDiv" style="display: none;">
-                <div id="playerTakingTurnDiv">
-
+                <div id="playerTakingTurnDiv" class="playerDiv noTeam">
+                    <img src="" class="playerImage" />
+                    <span class="playerNickname"></span> is taking their turn.
                 </div>
             </div>
             <div id="endingRoundDiv" style="display: none;">
@@ -76,13 +86,13 @@
             </div>
             <div id="scoreDiv">
                 <h2>Scores</h2>
-                <div>
+                <div class="blueTeam">
                     <h3>Blue Team</h3>
-                    <p id="blueTeamScore"></p>
+                    <p id="blueTeamScoreLbl"></p>
                 </div>
-                <div>
+                <div class="redTeam">
                     <h3>Red Team</h3>
-                    <p id="redTeamScore"></p>
+                    <p id="redTeamScoreLbl"></p>
                 </div>
             </div>
             <div id="teamsDiv">
@@ -95,6 +105,18 @@
             <h1>Game Over</h1>
             <div id="finalScoreDiv">
                 <h2>Final Score</h2>
+                <div class="blueTeam">
+                    <h3>Blue Team</h3>
+                    <p id="blueTeamTotalScoreLbl"></p>
+                </div>
+                <div class="redTeam">
+                    <h3>Red Team</h3>
+                    <p id="redTeamTotalScoreLbl"></p>
+                </div>
+            </div>
+            <div>
+                <p>Play Again?</p>
+                <button id="restartBtn">Let's Play!</button>
             </div>
         </div>
 
@@ -109,13 +131,23 @@
 
             var charades = [];
 
+            var playerTakingTurn = null;
+
+            var score;
+
 
             function init() {
                 airconsole = new AirConsole();
                 
                 screen = new Screen();
+                createNewScore()
 
                 $('#startBtn').click(startGame);
+
+                $('#startNextRoundBtn').click(startNextRound);
+
+                $('#restartBtn').click(_ => setScreenState(ScreenState.NEW));
+
 
                 airconsole.onReady = function(code) {
                     viewManager = new AirConsoleViewManager(airconsole);
@@ -164,6 +196,8 @@
 
 
                 airconsole.onCustomDeviceStateChange = function (device_id, data) {
+                    viewManager.onViewChange(data, function(view_id) { });
+
                     var player = players.find(e => e.device_id == device_id);
 
                     if (player == undefined) { return; }
@@ -177,11 +211,26 @@
                         if (data.state == PlayerState.READY) {
                             checkPlayerStates();
                         }
+                        else if (data.state == PlayerState.TAKING_TURN) {
+                            playerTakingTurn = players.find(e => e.device_id == device_id);;
+                            setScreenState(ScreenState.TAKING_TURN);
+                        }
+                        else if (playerTakingTurn != null && playerTakingTurn.device_id == device_id && data.state == PlayerState.WAITING_TURN) {
+                            // Player is finished taking their turn
+                            playerTakingTurn = null;
+                            setScreenState(ScreenState.WAITING_TURN);
+                        }
+                        else if (playerTakingTurn != null && playerTakingTurn.device_id == device_id && data.state == PlayerState.WAITING_FOR_NEXT_ROUND) {
+                            // Player finished the round
+                            playerTakingTurn = null;
+                            setScreenState(ScreenState.ENDING_ROUND);
+                        }
+                        else if (data.state == PlayerState.GAME_OVER && screen.state != ScreenState.GAME_OVER) {
+                            // Player ended the game
+                            playerTakingTurn = null;
+                            setScreenState(ScreenState.GAME_OVER);
+                        }
                     }
-
-                    // viewManager.onViewChange(data, function(view_id) {
-
-                    // });
                 };
 
 
@@ -191,7 +240,20 @@
 
 
                 airconsole.on(UCEvent.SEND_PHRASE, function(device_id, data, context) {
+                    var player = players.find(e => e.device_id == device_id);
+                    var team = "None";
+                    if (player.team == Team.RED) { team = "Red" }
+                    else if (player.team == Team.BLUE) { team = "Blue "}
+                    console.log("Received phrase \"" + data.phrase + "\" from player " + player.nickname + " on team " + team);
+                    
                     charades.push(new Charade(data.phrase));
+                    $('#phrasesSubmittedLbl').html(charades.length);
+                });
+
+                airconsole.on(UCEvent.SEND_CHARADES, function(device_id, data, context) {
+                    if (data.length != 0) {
+                        charades = data;
+                    }
                 });
             }
 
@@ -229,7 +291,7 @@
 
                 var stateSpan = document.createElement("span");
                 stateSpan.className = "playerState";
-                stateSpan.innerText = player.state == PlayerState.READY ? "...Ready!" : "...";
+                stateSpan.innerText = (player.state == PlayerState.READY) ? "...Ready!" : "...";
                 div.appendChild(stateSpan);
 
                 var playersDiv = document.getElementById("playersDiv");
@@ -261,7 +323,7 @@
                 // remove from previous div
                 playerDiv.parentNode.removeChild(playerDiv);
 
-                var teamDivID = team == Team.RED ? "redTeamDiv" : "blueTeamDiv";
+                var teamDivID = (team == Team.RED) ? "redTeamDiv" : "blueTeamDiv";
                 // move to team div
                 var teamDiv = document.getElementById(teamDivID);
                 teamDiv.appendChild(playerDiv);
@@ -272,7 +334,7 @@
 
             function setPlayerState(device_id, state) {
                 var player = players.find(e => e.device_id == device_id);
-                player.team = Team.RED;
+
                 if (player == undefined) { return; }
                 
                 player.state = state;
@@ -294,13 +356,32 @@
 
 
             function startGame() {
+                charades = shuffle(charades);
+                airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
+
                 screen.round = Round.ONE;
                 airconsole.setCustomDeviceStateProperty("round", Round.ONE);
 
+                saveScore();
+
                 setScreenState(ScreenState.WAITING_TURN);
 
-                viewManager.controllersShow("Game");
-                airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
+                viewManager.allShow("Game");
+                updateGame();
+            }
+
+
+            function startNextRound() {
+                if (screen.round == Round.ONE) {
+                    screen.round = Round.TWO;
+                    airconsole.setCustomDeviceStateProperty("round", Round.TWO);
+                }
+                else {
+                    screen.round = Round.THREE;
+                    airconsole.setCustomDeviceStateProperty("round", Round.THREE);
+                }
+
+                setScreenState(ScreenState.WAITING_TURN);
             }
 
 
@@ -317,6 +398,26 @@
                 
 
                 // takingTurnDiv
+                if (ScreenState.TAKING_TURN && playerTakingTurn != null) {
+                    // FIXME: playerTakingTurn.team is always Team.RED
+                    changeElementToTeamColor($('#playerTakingTurnDiv').get(0), playerTakingTurn.team);
+
+                    $('#playerTakingTurnDiv').find(".playerImage")
+                        .attr("src", playerTakingTurn.profilePicture);
+                    
+                    $('#playerTakingTurnDiv').find(".playerNickname")
+                        .html(playerTakingTurn.nickname);
+                }
+
+                // teamScoresDiv
+                $('#blueTeamScoreLbl').html(score[screen.round][Team.BLUE]);
+                $('#redTeamScoreLbl').html(score[screen.round][Team.RED]);
+            }
+
+
+            function updateGameOver() {
+                $('#blueTeamTotalScoreLbl').html(score[screen.round][Team.BLUE]);
+                $('#redTeamTotalScoreLbl').html(score[screen.round][Team.RED]);
             }
 
 
@@ -333,6 +434,10 @@
                         }
                         else {
                             // New game
+                            createNewScore();
+                            charades.length = 0;
+                            screen.round = Round.NONE;
+                            viewManager.show('Lobby');
                         }
                         break;
                     case ScreenState.READY:
@@ -341,17 +446,66 @@
                     case ScreenState.WAITING_TURN:
                         if (oldState == ScreenState.READY) {
                             // Starting game
-                            $('#Lobby').hide();
-                            $('#Game').show();
                         }
-                        updateGame();
+                        else if (oldState == ScreenState.TAKING_TURN) {
+                            // A Player finished their turn
+                            saveScore();
+                        }
+                        $('#waitingTurnDiv').show();
+                        $('#takingTurnDiv').hide();
+                        $('#endingRoundDiv').hide();
 
+                        updateGame();
                         break;
                     case ScreenState.TAKING_TURN:
+                        $('#waitingTurnDiv').hide();
+                        $('#takingTurnDiv').show();
+                        updateGame();
                         break;
                     case ScreenState.ENDING_ROUND:
+                        saveScore();
+                        
+                        // reset charades
+                        charades.forEach(e => {
+                            e.team = Team.NONE;
+                            e.state = CharadeState.NONE;
+                        });
+
+                        $('#waitingTurnDiv').hide();
+                        $('#takingTurnDiv').hide();
+                        $('#endingRoundDiv').show();
+                        updateGame();
+                        break;
+                    case ScreenState.GAME_OVER:
+                        saveScore();
                         break;
                 }
+            }
+
+
+            function createNewScore() {
+                score = {
+                    [Round.ONE]: {
+                        [Team.BLUE]: 0,
+                        [Team.RED]: 0
+                    },
+                    [Round.TWO]: {
+                        [Team.BLUE]: 0,
+                        [Team.RED]: 0
+                    },
+                    [Round.THREE]: {
+                        [Team.BLUE]: 0,
+                        [Team.RED]: 0
+                    }
+                }
+            }
+
+            function saveScore() {
+                var blueGuessed = charades.filter(e => e.state == CharadeState.GUESSED && e.team == Team.BLUE);
+                var redGuessed = charades.filter(e => e.state == CharadeState.GUESSED && e.team == Team.RED);
+                
+                score[screen.round][Team.BLUE] = blueGuessed.length;
+                score[screen.round][Team.RED] = redGuessed.length;
             }
 
 
