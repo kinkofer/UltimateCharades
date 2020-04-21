@@ -208,7 +208,7 @@
 
                     if ('state' in data && player.state != data.state) {
                         setPlayerState(device_id, data.state);
-                        if (data.state == PlayerState.READY) {
+                        if (data.state == PlayerState.READY || data.state == PlayerState.NOT_READY) {
                             checkPlayerStates();
                         }
                         else if (data.state == PlayerState.TAKING_TURN) {
@@ -240,12 +240,6 @@
 
 
                 airconsole.on(UCEvent.SEND_PHRASE, function(device_id, data, context) {
-                    var player = players.find(e => e.device_id == device_id);
-                    var team = "None";
-                    if (player.team == Team.RED) { team = "Red" }
-                    else if (player.team == Team.BLUE) { team = "Blue "}
-                    console.log("Received phrase \"" + data.phrase + "\" from player " + player.nickname + " on team " + team);
-                    
                     charades.push(new Charade(data.phrase));
                     $('#phrasesSubmittedLbl').html(charades.length);
                 });
@@ -356,7 +350,7 @@
 
 
             function startGame() {
-                charades = shuffle(charades);
+                // charades = shuffle(charades);
                 airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
 
                 screen.round = Round.ONE;
@@ -366,7 +360,6 @@
 
                 setScreenState(ScreenState.WAITING_TURN);
 
-                viewManager.allShow("Game");
                 updateGame();
             }
 
@@ -432,7 +425,7 @@
                             // New player joined
                             $('#readyDiv').hide();
                         }
-                        else {
+                        else if (oldState == ScreenState.GAME_OVER) {
                             // New game
                             createNewScore();
                             charades.length = 0;
@@ -446,6 +439,7 @@
                     case ScreenState.WAITING_TURN:
                         if (oldState == ScreenState.READY) {
                             // Starting game
+                            viewManager.show('Game');
                         }
                         else if (oldState == ScreenState.TAKING_TURN) {
                             // A Player finished their turn
@@ -468,8 +462,9 @@
                         // reset charades
                         charades.forEach(e => {
                             e.team = Team.NONE;
-                            e.state = CharadeState.NONE;
+                            e.state = CharadeState.NEW;
                         });
+                        airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
 
                         $('#waitingTurnDiv').hide();
                         $('#takingTurnDiv').hide();

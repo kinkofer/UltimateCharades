@@ -141,7 +141,7 @@
             </div>
 
             <div id="endingRoundDiv">
-                <p>This round has ended. Check the score of the screen.</p>
+                <p>This round has ended. Check the score on the screen.</p>
             </div>
         </div>
 
@@ -150,6 +150,7 @@
             <h1>Game Over</h1>
             <div id="finalScoreDiv">
                 <h2>Final Score</h2>
+                
             </div>
         </div>
 
@@ -223,7 +224,12 @@
                             updateGame();
                         }
 
-                        if (player.state == PlayerState.WAITING_FOR_NEXT_ROUND &&
+                        if (player.state == PlayerState.READY &&
+                            data.state == ScreenState.WAITING_TURN) {
+                            // Start game
+                            setPlayerState(PlayerState.WAITING_TURN);
+                        }
+                        else if (player.state == PlayerState.WAITING_FOR_NEXT_ROUND &&
                             data.state == ScreenState.WAITING_TURN) {
                             // Next round
                             setPlayerState(PlayerState.WAITING_TURN);
@@ -323,7 +329,11 @@
                         // TODO: Enable team selection and phrases
                         break;
                     case PlayerState.WAITING_TURN:
-                        // viewManager.show("Game");
+                        viewManager.show("Game");
+                        if (oldState == PlayerState.TAKING_TURN) {
+                            $('#confirmTakingTurnDiv').show();
+                            $('#takingTurnDiv').hide();
+                        }
                         updateGame();
                         break;
                     case PlayerState.TAKING_TURN:
@@ -334,7 +344,17 @@
                         break;
                     case PlayerState.WAITING_FOR_NEXT_ROUND:
                         viewManager.show("EndingRound");
+                        if (oldState == PlayerState.TAKING_TURN) {
+                            $('#confirmTakingTurnDiv').show();
+                            $('#takingTurnDiv').hide();
+                        }
                         updateGame();
+                        break;
+                    case PlayerState.GAME_OVER:
+                    if (oldState == PlayerState.TAKING_TURN) {
+                            $('#confirmTakingTurnDiv').show();
+                            $('#takingTurnDiv').hide();
+                        }
                         break;
                 }
             }
@@ -391,7 +411,7 @@
                 $('#confirmTakingTurnDiv').hide();
                 $('#takingTurnDiv').show();
 
-                charades = shuffle(charades);
+                // charades = shuffle(charades);
 
                 // showPhrases();
                 showNextPhrase();
@@ -420,6 +440,7 @@
 
             function endTurn() {
                 currentCharade = null;
+                $('#phrase').html("");
 
                 // Send results
                 airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
@@ -431,6 +452,7 @@
 
             function endRound() {
                 currentCharade = null;
+                $('#phrase').html("");
 
                 // Send results
                 airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
