@@ -22,13 +22,14 @@
             #scoreDiv {
                 width: 40%;
             }
+
+            table th, table td {
+                padding: .3em;
+                border: 1px solid #999;
+            }
         </style>
     </head>
     <body onload="init()">
-        <div id="log">
-
-        </div>
-
         <div id="Lobby" class="view default-view">
             <h1>Ultimate Charades</h1>
 
@@ -66,7 +67,7 @@
                     <p>Rule: Charades, no speaking</p>
                 </div>
                 <div id="roundThreeDiv" style="display: none;">
-                    <h2>Round One</h2>
+                    <h2>Round Three</h2>
                     <p>Rule: One word clues</p>
                 </div>
             </div>
@@ -105,14 +106,34 @@
             <h1>Game Over</h1>
             <div id="finalScoreDiv">
                 <h2>Final Score</h2>
-                <div class="blueTeam">
-                    <h3>Blue Team</h3>
-                    <p id="blueTeamTotalScoreLbl"></p>
-                </div>
-                <div class="redTeam">
-                    <h3>Red Team</h3>
-                    <p id="redTeamTotalScoreLbl"></p>
-                </div>
+
+                <table>
+                    <tr>
+                        <td></td>
+                        <th scope="col" class="redTeam">Red</th>
+                        <th scope="col" class="blueTeam">Blue</th>
+                    </tr>
+                    <tr>
+                        <th scope="row">Round 1</th>
+                        <td id="round1RedScoreLbl">0</td>
+                        <td id="round1BlueScoreLbl">0</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Round 2</th>
+                        <td id="round2RedScoreLbl">0</td>
+                        <td id="round2BlueScoreLbl">0</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Round 3</th>
+                        <td id="round3RedScoreLbl">0</td>
+                        <td id="round3BlueScoreLbl">0</td>
+                    </tr>
+                    <tr>
+                        <th scope="row">Total</th>
+                        <td id="totalRedScoreLbl">0</td>
+                        <td id="totalBlueScoreLbl">0</td>
+                    </tr>
+                </table>
             </div>
             <div>
                 <p>Play Again?</p>
@@ -146,7 +167,7 @@
 
                 $('#startNextRoundBtn').click(startNextRound);
 
-                $('#restartBtn').click(_ => setScreenState(ScreenState.NEW));
+                $('#restartBtn').click(resetGame);
 
 
                 airconsole.onReady = function(code) {
@@ -252,6 +273,16 @@
             }
 
 
+            function resetGame() {
+                createNewScore();
+                charades.length = 0;
+                screen.round = Round.NONE;
+                refreshPlayers();
+                $('#phrasesSubmittedLbl').html('0');
+                setScreenState(ScreenState.NEW);
+            }
+
+
             function refreshPlayers() {
                 var deviceIDs = airconsole.getControllerDeviceIds();
                 airconsole.setActivePlayers(deviceIDs.length);
@@ -350,7 +381,7 @@
 
 
             function startGame() {
-                // charades = shuffle(charades);
+                charades = shuffle(charades);
                 airconsole.broadcastEvent(UCEvent.SEND_CHARADES, charades);
 
                 screen.round = Round.ONE;
@@ -392,7 +423,6 @@
 
                 // takingTurnDiv
                 if (ScreenState.TAKING_TURN && playerTakingTurn != null) {
-                    // FIXME: playerTakingTurn.team is always Team.RED
                     changeElementToTeamColor($('#playerTakingTurnDiv').get(0), playerTakingTurn.team);
 
                     $('#playerTakingTurnDiv').find(".playerImage")
@@ -409,8 +439,19 @@
 
 
             function updateGameOver() {
-                $('#blueTeamTotalScoreLbl').html(score[screen.round][Team.BLUE]);
-                $('#redTeamTotalScoreLbl').html(score[screen.round][Team.RED]);
+                $('#round1BlueScoreLbl').html(score[Round.ONE][Team.BLUE]);
+                $('#round1RedScoreLbl').html(score[Round.ONE][Team.RED]);
+
+                $('#round2BlueScoreLbl').html(score[Round.TWO][Team.BLUE]);
+                $('#round2RedScoreLbl').html(score[Round.TWO][Team.RED]);
+
+                $('#round3BlueScoreLbl').html(score[Round.THREE][Team.BLUE]);
+                $('#round3RedScoreLbl').html(score[Round.THREE][Team.RED]);
+
+                var totalBlueScore = score[Round.ONE][Team.BLUE] + score[Round.TWO][Team.BLUE] + score[Round.THREE][Team.BLUE];
+                var totalRedScore = score[Round.ONE][Team.RED] + score[Round.TWO][Team.RED] + score[Round.THREE][Team.RED];
+                $('#totalBlueScoreLbl').html(totalBlueScore);
+                $('#totalRedScoreLbl').html(totalRedScore);
             }
 
 
@@ -427,9 +468,7 @@
                         }
                         else if (oldState == ScreenState.GAME_OVER) {
                             // New game
-                            createNewScore();
-                            charades.length = 0;
-                            screen.round = Round.NONE;
+                            $('#readyDiv').hide();
                             viewManager.show('Lobby');
                         }
                         break;
@@ -473,6 +512,8 @@
                         break;
                     case ScreenState.GAME_OVER:
                         saveScore();
+                        updateGameOver();
+                        viewManager.show('GameOver');
                         break;
                 }
             }
@@ -501,13 +542,6 @@
                 
                 score[screen.round][Team.BLUE] = blueGuessed.length;
                 score[screen.round][Team.RED] = redGuessed.length;
-            }
-
-
-            function log(logMessage) {
-                var log = document.getElementById("log");
-                log.appendChild(document.createTextNode(logMessage));
-                log.appendChild(document.createElement("br"));
             }
         </script>
 

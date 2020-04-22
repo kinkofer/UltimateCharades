@@ -66,6 +66,10 @@
                 <p id="readyPhrasesError" class="errorMessage" style="display: none;">Submit at least 3 phrases</p>
                 <button id="readyBtn">Ready</button>
             </div>
+            <div id="cancelReadyDiv" style="display: none;">
+                <h1>Waiting for other players</h1>
+                <button id="cancelReadyBtn">Cancel</button>
+            </div>
             <div id="keyboard"></div>
         </div>
 
@@ -148,10 +152,6 @@
 
         <div id="GameOver" class="view">
             <h1>Game Over</h1>
-            <div id="finalScoreDiv">
-                <h2>Final Score</h2>
-                
-            </div>
         </div>
 
 
@@ -185,6 +185,7 @@
                 $('#blueTeamBtn').click(_ => setPlayerTeam(Team.BLUE));
 
                 $('#readyBtn').click(readyPlayer);
+                $('#cancelReadyBtn').click(readyPlayer);
 
                 $('#phraseBtn').click(sendPhrase);
 
@@ -258,6 +259,13 @@
                 });
             }
 
+
+            function resetGame() {
+                phrasesSubmitted = 0;
+                $('#phrasesSubmittedLbl').html("0");
+                charades.length = 0;
+            }
+
             
             // - Player Start
 
@@ -314,26 +322,29 @@
                 switch (newState) {
                     case PlayerState.NONE:
                         // New game
+                        resetGame();
                         viewManager.show('PlayerStart');
+
+                        $('#readyDiv').show();
+                        $('#cancelReadyDiv').hide();
                         break;
                     case PlayerState.READY:
-                        $('#readyDiv').find("h1").html("Waiting for other players");
-                        $('#readyDiv').find("button").html("Cancel");
+                        $('#readyDiv').hide();
+                        $('#cancelReadyDiv').show();
 
                         // TODO: Disable team selection and phrases
                         break;
                     case PlayerState.NOT_READY:
-                        $('#readyDiv').find("h1").html("Ready to start?");
-                        $('#readyDiv').find("button").html("Ready");
+                        $('#readyDiv').show();
+                        $('#cancelReadyDiv').hide();
 
                         // TODO: Enable team selection and phrases
                         break;
                     case PlayerState.WAITING_TURN:
+                        $('#confirmTakingTurnDiv').show();
+                        $('#takingTurnDiv').hide();
                         viewManager.show("Game");
-                        if (oldState == PlayerState.TAKING_TURN) {
-                            $('#confirmTakingTurnDiv').show();
-                            $('#takingTurnDiv').hide();
-                        }
+                            
                         updateGame();
                         break;
                     case PlayerState.TAKING_TURN:
@@ -344,17 +355,10 @@
                         break;
                     case PlayerState.WAITING_FOR_NEXT_ROUND:
                         viewManager.show("EndingRound");
-                        if (oldState == PlayerState.TAKING_TURN) {
-                            $('#confirmTakingTurnDiv').show();
-                            $('#takingTurnDiv').hide();
-                        }
                         updateGame();
                         break;
                     case PlayerState.GAME_OVER:
-                    if (oldState == PlayerState.TAKING_TURN) {
-                            $('#confirmTakingTurnDiv').show();
-                            $('#takingTurnDiv').hide();
-                        }
+                        viewManager.show("GameOver");
                         break;
                 }
             }
@@ -411,9 +415,8 @@
                 $('#confirmTakingTurnDiv').hide();
                 $('#takingTurnDiv').show();
 
-                // charades = shuffle(charades);
+                charades = shuffle(charades);
 
-                // showPhrases();
                 showNextPhrase();
             }
 
@@ -470,22 +473,6 @@
 
             function endGame() {
                 setPlayerState(PlayerState.GAME_OVER);
-                viewManager.allShow("GameOver");
-            }
-
-
-            // For testing only
-            function showPhrases() {
-                var phrases = charades.map(e => e.phrase);
-
-                if (phrases.length == 0) { return; }
-                
-                var ul = $("<ul></ul>");
-                ul.appendTo('#phrasesDiv');
-
-                var listItems = phrases.map(e => "<li>" + e + "</li>");
-                
-                ul.append( listItems.join( "" ) );
             }
 
 
