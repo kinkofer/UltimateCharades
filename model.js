@@ -70,6 +70,7 @@ class Player {
         this.nickname = nickname;
         this.team = Team.NONE;
         this.state = PlayerState.NONE;
+        this.isCaptain = false;
     }
 
     getDivID() {

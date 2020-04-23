@@ -39,10 +39,6 @@
 
 
         <div id="PlayerStart" class="view default-view">
-            <div class="playerDiv">
-                <img src="" class="playerImage" />
-                <span class="playerNickname"></span>
-            </div>
             <div id="teamDiv" class="noTeam">
                 <h1>Choose your team</h1>
                 <button id="redTeamBtn">Red</button>
@@ -75,15 +71,6 @@
 
 
         <div id="Game" class="view">
-            <div class="playerDiv">
-                <img src="" class="playerImage" />
-                <span class="playerNickname"></span>
-            </div>
-            <div class="gameRoundDiv">
-                <h2 class="roundLbl">Round One</h2>
-                <p class="ruleLbl">Rule: Speaking only</p>
-            </div>
-
             <div id="waitingTurnDiv">
                 <button id="startTurnBtn">It's my turn</button>
                 <p id="startTurnError" class="errorMessage" style="display: none;">Someone else is taking their turn</p>
@@ -93,15 +80,6 @@
 
 
         <div id="TakingTurn" class="view">
-            <div class="playerDiv">
-                <img src="" class="playerImage" />
-                <span class="playerNickname"></span>
-            </div>
-            <div class="gameRoundDiv">
-                <h2 class="roundLbl">Round One</h2>
-                <p class="ruleLbl">Rule: Speaking only</p>
-            </div>
-
             <div id="confirmTakingTurnDiv">
                 <p>Press start when the time keeper tells you.</p>
                 <button id="startClueGivingBtn">Start clue giving</button>
@@ -119,31 +97,14 @@
 
 
         <div id="Guessing" class="view">
-            <div class="playerDiv">
-                <img src="" class="playerImage" />
-                <span class="playerNickname"></span>
-            </div>
-            <div class="gameRoundDiv">
-                <h2 class="roundLbl">Round One</h2>
-                <p class="ruleLbl">Rule: Speaking only</p>
-            </div>
-
             <div id="guessingDiv">
-                <p>You are guessing</p>
+                <p id="isGuessingLbl">You are guessing.</p>
+                <p id="notGuessingLbl">The other team is guessing.</p>
             </div>
         </div>
 
 
         <div id="EndingRound" class="view">
-            <div class="playerDiv">
-                <img src="" class="playerImage" />
-                <span class="playerNickname"></span>
-            </div>
-            <div class="gameRoundDiv">
-                <h2 class="roundLbl">Round One</h2>
-                <p class="ruleLbl">Rule: Speaking only</p>
-            </div>
-
             <div id="endingRoundDiv">
                 <p>This round has ended. Check the score on the screen.</p>
             </div>
@@ -152,6 +113,29 @@
 
         <div id="GameOver" class="view">
             <h1>Game Over</h1>
+        </div>
+
+
+
+        <div id="playerDivTemplate" style="display: none;">
+            <img src="" class="playerImage" />
+            <span class="captainLbl" style="display: none;">Captain </span>
+            <span class="playerNickname"></span>
+        </div>
+
+        <div id="gameRoundDivTemplate" style="display: none;">
+            <div class="roundOneDiv">
+                <h2>Round One</h2>
+                <h3>Rule: Speaking only</h3>
+            </div>
+            <div class="roundTwoDiv" style="display: none;">
+                <h2>Round Two</h2>
+                <h3>Rule: Charades, no speaking</h3>
+            </div>
+            <div class="roundThreeDiv" style="display: none;">
+                <h2>Round Three</h2>
+                <h3>Rule: One word clues</h3>
+            </div>
         </div>
 
 
@@ -197,6 +181,18 @@
                 $('#endTurnBtn').click(endTurn);
                 $('#correctBtn').click(guessCurrentPhrase);
 
+                
+                // Prepend Game Round and Rule to game Views
+                var gameRoundDiv = $('#gameRoundDivTemplate').clone().show();
+                gameRoundDiv.attr({ 'id': "", 'class': "gameRoundDiv"});
+                $('#Game, #TakingTurn, #Guessing, #EndingRound').prepend(gameRoundDiv);
+
+                // Prepend playerDiv to all Views
+                var playerDiv = $('#playerDivTemplate').clone().show();
+                playerDiv.attr({ 'id': "", 'class': "playerDiv"});
+                $('.view').prepend(playerDiv);
+
+
                 airconsole.onReady = function(code) {
                     viewManager = new AirConsoleViewManager(airconsole);
 
@@ -207,6 +203,14 @@
                     player = new Player(device_id, profilePicture, nickname);
                     updatePlayerDiv();
                 };
+
+
+                airconsole.onActivePlayersChange = function(player_number) {
+                    if (player_number == 0 &&
+                        !player.isCaptain) {
+                        setCaptain(true);
+                    }
+                }
 
 
                 airconsole.onDeviceStateChange = function(device_id, user_data) {
@@ -244,6 +248,9 @@
                     else if ("state" in data) {
                         playerDidChangeState(device_id, data.state);
                     }
+                    else if ("isCaptain" in data && data.isCaptain == true) {
+                        setCaptain(false)
+                    }
 
                     viewManager.onViewChange(data, function(view_id) { });
                 };
@@ -274,6 +281,13 @@
                 airconsole.setCustomDeviceStateProperty("team", team);
                 changeElementToTeamColor($("#teamDiv").get(0), team);
                 $('#readyTeamError').hide();
+            }
+
+
+            function setCaptain(isCaptain) {
+                player.isCaptain = isCaptain;
+                airconsole.setCustomDeviceStateProperty("isCaptain", isCaptain);
+                isCaptain ? $('.captainLbl').show() : $('.captainLbl').hide();
             }
 
 
@@ -351,6 +365,10 @@
                         viewManager.show("TakingTurn");
                         break;
                     case PlayerState.GUESSING:
+                        var guessingTeam = airconsole.getCustomDeviceState(takingTurnDeviceID).team;
+                        (player.team == guessingTeam) ? $('#isGuessingLbl').show() : $('#isGuessingLbl').hide();
+                        (player.team != guessingTeam) ? $('#notGuessingLbl').show() : $('#notGuessingLbl').hide();
+
                         viewManager.show("Guessing");
                         break;
                     case PlayerState.WAITING_FOR_NEXT_ROUND:
@@ -394,20 +412,10 @@
             function updateGame() {
                 var screen = airconsole.getCustomDeviceState(AirConsole.SCREEN);
 
-                var roundLbl = "Round One";
-                var ruleLbl = "Rule: Speaking only";
-
-                if (screen.round == Round.TWO) {
-                    roundLbl = "Round Two";
-                    ruleLbl = "Rule: Charades, no talking";
-                }
-                else if (screen.round == Round.THREE) {
-                    roundLbl = "Round Three";
-                    ruleLbl = "Rule: One word clue";
-                }
-
-                $('.roundLbl').html(roundLbl);
-                $('.ruleLbl').html(ruleLbl);
+                // gameRoundDiv
+                (screen.round == Round.ONE) ? $('.roundOneDiv').show() : $('.roundOneDiv').hide();
+                (screen.round == Round.TWO) ? $('.roundTwoDiv').show() : $('.roundTwoDiv').hide();
+                (screen.round == Round.THREE) ? $('.roundThreeDiv').show() : $('.roundThreeDiv').hide();
             }
 
 

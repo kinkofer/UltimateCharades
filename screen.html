@@ -11,6 +11,23 @@
         <style>
             body { color: whitesmoke; }
 
+            h1 { 
+                position: fixed;
+                right: 20px;
+                font: 100px;
+                font-family: 'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+                color: #222;
+                text-shadow: 0px 2px 3px #555;
+            }
+
+            h2 {
+                font: 70px;
+            }
+
+            h3 {
+                font: 50px;
+            }
+
             .playerDiv { 
                 width: 40%;
                 border: 3px solid black;
@@ -30,9 +47,9 @@
         </style>
     </head>
     <body onload="init()">
-        <div id="Lobby" class="view default-view">
-            <h1>Ultimate Charades</h1>
+        <h1>Ultimate Charades</h1>
 
+        <div id="Lobby" class="view default-view">
             <div>
                 <p>Join a team and submit your phrases.</p>
                 <p>Phrases submitted: <span id="phrasesSubmittedLbl">0</span></p>
@@ -56,19 +73,18 @@
 
 
         <div id="Game" class="view">
-            <h1>Ultimate Charades</h1>
             <div id="gameRoundDiv">
                 <div id="roundOneDiv">
                     <h2>Round One</h2>
-                    <p>Rule: Speaking only</p>
+                    <h3>Rule: Speaking only</h3>
                 </div>
                 <div id="roundTwoDiv" style="display: none;">
                     <h2>Round Two</h2>
-                    <p>Rule: Charades, no speaking</p>
+                    <h3>Rule: Charades, no speaking</h3>
                 </div>
                 <div id="roundThreeDiv" style="display: none;">
                     <h2>Round Three</h2>
-                    <p>Rule: One word clues</p>
+                    <h3>Rule: One word clues</h3>
                 </div>
             </div>
             <div id="waitingTurnDiv">
@@ -103,9 +119,9 @@
 
 
         <div id="GameOver" class="view">
-            <h1>Game Over</h1>
+            <h2>Game Over</h2>
             <div id="finalScoreDiv">
-                <h2>Final Score</h2>
+                <h3>Final Score</h3>
 
                 <table>
                     <tr>
@@ -252,6 +268,11 @@
                             setScreenState(ScreenState.GAME_OVER);
                         }
                     }
+
+                    if ('isCaptain' in data && data.isCaptain == true) {
+                        players.forEach(e => { e.isCaptain = false });
+                        player.isCaptain = true;
+                    }
                 };
 
 
@@ -289,6 +310,9 @@
 
                 players.forEach(e => {
                     createPlayerDiv(e);
+
+                    var captainLbl = e.getJQueryDiv().find('.captainLbl');
+                    e.isCaptain ? captainLbl.show() : captainLbl.hide();
                 });
             }
 
@@ -300,27 +324,23 @@
                     return;
                 }
 
-                div = document.createElement("div");
-                div.className = "playerDiv noTeam";
-                div.id = player.getDivID();
+                div = $('<div class="playerDiv noTeam"></div>');
+                div.attr('id', player.getDivID());
 
-                var img = document.createElement("img");
-                img.className = "playerImage";
-                img.src = player.profilePicture;
-                div.appendChild(img);
+                var img = $('<img class="playerImage" />');
+                img.attr('src', player.profilePicture);
 
-                var nicknameSpan = document.createElement("span");
-                nicknameSpan.className = "playerNickname";
-                nicknameSpan.innerText = player.nickname
-                div.appendChild(nicknameSpan);
+                var captainSpan = $('<span class="captainLbl">Captain </span>');
+                captainSpan.attr('style', 'display: none;');
 
-                var stateSpan = document.createElement("span");
-                stateSpan.className = "playerState";
-                stateSpan.innerText = (player.state == PlayerState.READY) ? "...Ready!" : "...";
-                div.appendChild(stateSpan);
+                var playerNicknameSpan = $('<span class="playerNickname"></span>')
+                playerNicknameSpan.html(player.nickname);
 
-                var playersDiv = document.getElementById("playersDiv");
-                playersDiv.appendChild(div);
+                var playerStateSpan = $('<span class="playerState">...</span>');
+                
+                div.append(img, captainSpan, playerNicknameSpan, playerStateSpan);
+
+                $('#playersDiv').append(div);
             }
 
 
