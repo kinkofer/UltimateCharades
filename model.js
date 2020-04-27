@@ -22,7 +22,10 @@ Object.freeze(PlayerState);
 // 300
 const UCEvent = {
     SEND_PHRASE: 300,
-    SEND_CHARADES: 301
+    SEND_CHARADES: 301,
+    START_GAME: 302,
+    START_NEXT_ROUND: 303,
+    START_NEW_GAME: 304
 };
 Object.freeze(UCEvent);
 

@@ -56,7 +56,6 @@
             </div>
             <div id="readyDiv" style="display: none;">
                 <h2>Everyone is ready!</h2>
-                <button id="startBtn">Start Game</button>
             </div>
             <div id="playersDiv">
                 <h2>Waiting for...</h2>
@@ -98,8 +97,7 @@
                 </div>
             </div>
             <div id="endingRoundDiv" style="display: none;">
-                <p>This round has ended. Start next round?</p>
-                <button id="startNextRoundBtn">Start Round</button>
+                <p>This round has ended. The Captain may start the next round.</p>
             </div>
             <div id="scoreDiv">
                 <h2>Scores</h2>
@@ -153,7 +151,7 @@
             </div>
             <div>
                 <p>Play Again?</p>
-                <button id="restartBtn">Let's Play!</button>
+                <p>The Captain can start a new game.</p>
             </div>
         </div>
 
@@ -178,12 +176,6 @@
                 
                 screen = new Screen();
                 createNewScore()
-
-                $('#startBtn').click(startGame);
-
-                $('#startNextRoundBtn').click(startNextRound);
-
-                $('#restartBtn').click(resetGame);
 
 
                 airconsole.onReady = function(code) {
@@ -291,6 +283,10 @@
                         charades = data;
                     }
                 });
+
+                airconsole.on(UCEvent.START_GAME, function(device_id, data, context) { startGame(); });
+                airconsole.on(UCEvent.START_NEXT_ROUND, function(device_id, data, context) { startNextRound(); });
+                airconsole.on(UCEvent.START_NEW_GAME, function(device_id, data, context) { resetGame(); });
             }
 
 

@@ -66,6 +66,10 @@
                 <h1>Waiting for other players</h1>
                 <button id="cancelReadyBtn">Cancel</button>
             </div>
+            <div id="captainReadyDiv" style="display: none;">
+                <h2>Everyone is ready!</h2>
+                <button id="startBtn">Start Game</button>
+            </div>
             <div id="keyboard"></div>
         </div>
 
@@ -108,11 +112,19 @@
             <div id="endingRoundDiv">
                 <p>This round has ended. Check the score on the screen.</p>
             </div>
+            <div id="captainEndingRoundDiv" style="display: none;">
+                <p>Ready to start the next round?</p>
+                <button id="startNextRoundBtn">Start Round</button>
+            </div>
         </div>
 
 
         <div id="GameOver" class="view">
             <h1>Game Over</h1>
+            <div id="captainGameOverDiv" style="display: none;">
+                <p>Play Again?</p>
+                <button id="restartBtn">Let's Play!</button>
+            </div>
         </div>
 
 
@@ -171,6 +183,8 @@
                 $('#readyBtn').click(readyPlayer);
                 $('#cancelReadyBtn').click(readyPlayer);
 
+                $('#startBtn').click(_ => airconsole.sendEvent(AirConsole.SCREEN, UCEvent.START_GAME, null));
+
                 $('#phraseBtn').click(sendPhrase);
 
                 $('#startTurnBtn').click(_ => setPlayerState(PlayerState.TAKING_TURN));
@@ -181,7 +195,10 @@
                 $('#endTurnBtn').click(endTurn);
                 $('#correctBtn').click(guessCurrentPhrase);
 
-                
+                $('#startNextRoundBtn').click(_ => airconsole.sendEvent(AirConsole.SCREEN, UCEvent.START_NEXT_ROUND, null));
+                $('#restartBtn').click(_ => airconsole.sendEvent(AirConsole.SCREEN, UCEvent.START_NEW_GAME, null));
+
+
                 // Prepend Game Round and Rule to game Views
                 var gameRoundDiv = $('#gameRoundDivTemplate').clone().show();
                 gameRoundDiv.attr({ 'id': "", 'class': "gameRoundDiv"});
@@ -227,6 +244,17 @@
                     if (device_id == AirConsole.SCREEN) {
                         if (data.round != Round.NONE) {
                             updateGame();
+                        }
+
+                        if (player.isCaptain) {
+                            if (data.state == ScreenState.NEW) { 
+                                $('#captainReadyDiv').hide();
+                                $('#captainGameOverDiv').hide();
+                            }
+                            else if (data.state == ScreenState.READY) { $('#captainReadyDiv').show(); }
+                            else if (data.state == ScreenState.ENDING_ROUND) { $('#captainEndingRoundDiv').show(); }
+                            else if (data.state == ScreenState.WAITING_TURN) { $('#captainEndingRoundDiv').hide(); }
+                            else if (data.state == ScreenState.GAME_OVER) { $('#captainGameOverDiv').show(); }
                         }
 
                         if (player.state == PlayerState.READY &&
