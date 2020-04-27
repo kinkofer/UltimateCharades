@@ -3,13 +3,11 @@
         <script type="text/javascript" src="https://www.airconsole.com/api/airconsole-1.7.0.js"></script>
         <script type="text/javascript" src="airconsole-view-manager.js"></script>
         <script type="text/javascript" src="airconsole-events.js"></script>
-        <script type="text/javascript" src="airconsole-keyboard.js"></script>
         <script type="text/javascript" src="utilities.js"></script>
         <script type="text/javascript" src="model.js"></script>
         <script type="text/javascript" src="jquery-3.5.0.min.js"></script>
 
         <link rel="stylesheet" type="text/css" href="style.css" />
-        <link rel="stylesheet" type="text/css" href="airconsole-keyboard.css" />
 
         <style>
             body { color: whitesmoke; }
@@ -46,9 +44,7 @@
             </div>
             <div>
                 <h1>Enter your phrases:</h1>
-                <div class="textfield" id="phraseTxt">
-                    <div style="color:#aaa"><i>ex. A bird in the hand is worth two in the bush</i></div>
-                </div>
+                <input type="text" id="phraseTxt" placeholder="ex. A bird in the hand is worth two in the bush" />
                 <button id="phraseBtn">Submit</button>
                 <p>
                     <span>Phrases submitted:</span>
@@ -70,7 +66,6 @@
                 <h2>Everyone is ready!</h2>
                 <button id="startBtn">Start Game</button>
             </div>
-            <div id="keyboard"></div>
         </div>
 
 
@@ -156,7 +151,6 @@
         <script type="text/javascript">
             var airconsole;
             var viewManager = null;
-            var keyboard;
 
             var player;
             var phrasesSubmitted = 0;
@@ -172,10 +166,6 @@
 
             function init() {
                 airconsole = new AirConsole();
-
-                keyboard = new AirConsoleKeyboard("keyboard");
-                keyboard.bind("phraseTxt");
-
 
                 $('#redTeamBtn').click(_ => setPlayerTeam(Team.RED));
                 $('#blueTeamBtn').click(_ => setPlayerTeam(Team.BLUE));
@@ -523,7 +513,7 @@
                     $('#phraseMaxError').hide();
                 }
 
-                let phrase = keyboard.valueText('phraseTxt');
+                let phrase = $('#phraseTxt').val();
 
                 if (phrase == "") { return; }
 
@@ -532,7 +522,7 @@
                 phrasesSubmitted++;
                 $('#phrasesSubmittedLbl').html(phrasesSubmitted);
 
-                keyboard.setValue("phraseTxt", "");
+                $('#phraseTxt').val("");
 
                 // TODO: Implement phrase editing
             }
