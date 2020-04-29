@@ -29,11 +29,28 @@
             }
 
             .playerDiv { 
-                width: 40%;
+                width: 80%;
                 border: 3px solid black;
                 vertical-align: middle;
                 font-size: xx-large;
                 padding: 10px;
+            }
+
+            #playersDiv .playerDiv { 
+                width: 40%;
+                display: inline-block;
+                margin-right: 30px;
+            }
+
+            #redTeamDiv {
+                float: left;
+                width: 50%;
+            }
+
+            #blueTeamDiv {
+                /* display: inline; */
+                float: right;
+                width: 50%;
             }
 
             #scoreDiv {
@@ -61,12 +78,14 @@
                 <h2>Waiting for...</h2>
             </div>
 
-            <div id="redTeamDiv">
-                <h2>Red Team</h2>
-            </div>
-
-            <div id="blueTeamDiv">
-                <h2>Blue Team</h2>
+            <div>
+                <div id="redTeamDiv">
+                    <h2>Red Team</h2>
+                </div>
+            
+                <div id="blueTeamDiv">
+                    <h2>Blue Team</h2>
+                </div>
             </div>
         </div>
 
