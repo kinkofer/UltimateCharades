@@ -58,6 +58,10 @@
                 font-size: xx-large;
             }
 
+            #timerDiv {
+                font-size: xx-large;
+            }
+
             #cancelTurnBtn, #endTurnBtn {
                 background-color: gray;
                 height: 20%;
@@ -65,8 +69,16 @@
                 font-size: xx-large;
             }
 
+            #endTurnBtn {
+                margin-top: -20px;
+            }
+
             #phrase {
                 font-size: xx-large;
+            }
+
+            .roundDiv h3, #timerDiv {
+                margin-top: -20px;
             }
 
             .textfield {
@@ -131,11 +143,14 @@
 
         <div id="TakingTurn" class="view">
             <div id="confirmTakingTurnDiv">
-                <p>Press start when the time keeper tells you.</p>
+                <p>The timer will begin once you start.</p>
                 <button id="startClueGivingBtn" class="noTeam">Start clue giving</button>
                 <button id="cancelTurnBtn">Cancel turn</button>
             </div>
             <div id="takingTurnDiv" style="display: none;">
+                <div id="timerDiv">
+                    <p>Time remaining: <span id="timer"></span></p>
+                </div>
                 <button id="endTurnBtn">End turn</button>
                 <div id="phrasesDiv">
                     <p id="phrase"></p>
@@ -182,15 +197,15 @@
         </div>
 
         <div id="gameRoundDivTemplate" style="display: none;">
-            <div class="roundOneDiv">
+            <div class="roundOneDiv roundDiv">
                 <h2>Round One</h2>
                 <h3>Rule: Speaking only</h3>
             </div>
-            <div class="roundTwoDiv" style="display: none;">
+            <div class="roundTwoDiv roundDiv" style="display: none;">
                 <h2>Round Two</h2>
                 <h3>Rule: Charades, no speaking</h3>
             </div>
-            <div class="roundThreeDiv" style="display: none;">
+            <div class="roundThreeDiv roundDiv" style="display: none;">
                 <h2>Round Three</h2>
                 <h3>Rule: One word clues</h3>
             </div>
@@ -213,6 +228,9 @@
             var maxPhrases = 3;
 
             var takingTurnDeviceID = null;
+
+            var timer = 60;
+            var timerInterval;
 
 
             function init() {
@@ -496,7 +514,21 @@
 
                 charades = shuffle(charades);
 
+                timerInterval = setInterval(countdown, 1000);
+
                 showNextPhrase();
+            }
+
+            
+            function countdown() {
+                if (timer == 0) {
+                    timer = 60;
+                    endTurn();
+                }
+                else {
+                    $('#timer').html(timer);
+                    timer--;
+                }
             }
 
 
@@ -521,6 +553,7 @@
 
 
             function endTurn() {
+                clearInterval(timerInterval);
                 currentCharade = null;
                 $('#phrase').html("");
 
