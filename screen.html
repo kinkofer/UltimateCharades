@@ -45,19 +45,20 @@
                 margin-right: 30px;
             }
 
-            #redTeamDiv {
+            #blueTeamDiv, #redTeamDiv {
                 float: left;
-                width: 50%;
-            }
-
-            #blueTeamDiv {
-                /* display: inline; */
-                float: right;
                 width: 50%;
             }
 
             #scoreDiv {
                 width: 40%;
+            }
+
+            #scoreDiv div {
+                display: inline-block;
+                padding: 20px;
+                width: 40%;
+                text-align: center;
             }
 
             table th, table td {
@@ -82,12 +83,11 @@
             </div>
 
             <div>
-                <div id="redTeamDiv">
-                    <h2>Red Team</h2>
-                </div>
-            
                 <div id="blueTeamDiv">
                     <h2>Blue Team</h2>
+                </div>
+                <div id="redTeamDiv">
+                    <h2>Red Team</h2>
                 </div>
             </div>
         </div>
@@ -120,6 +120,7 @@
             </div>
             <div id="endingRoundDiv" style="display: none;">
                 <p>This round has ended. The Captain may start the next round.</p>
+                <p>The previous player will start first to finish out their time.</p>
             </div>
             <div id="scoreDiv">
                 <h2>Scores</h2>
@@ -146,28 +147,28 @@
                 <table>
                     <tr>
                         <td></td>
-                        <th scope="col" class="redTeam">Red</th>
                         <th scope="col" class="blueTeam">Blue</th>
+                        <th scope="col" class="redTeam">Red</th>
                     </tr>
                     <tr>
                         <th scope="row">Round 1</th>
-                        <td id="round1RedScoreLbl">0</td>
                         <td id="round1BlueScoreLbl">0</td>
+                        <td id="round1RedScoreLbl">0</td>
                     </tr>
                     <tr>
                         <th scope="row">Round 2</th>
-                        <td id="round2RedScoreLbl">0</td>
                         <td id="round2BlueScoreLbl">0</td>
+                        <td id="round2RedScoreLbl">0</td>
                     </tr>
                     <tr>
                         <th scope="row">Round 3</th>
-                        <td id="round3RedScoreLbl">0</td>
                         <td id="round3BlueScoreLbl">0</td>
+                        <td id="round3RedScoreLbl">0</td>
                     </tr>
                     <tr>
                         <th scope="row">Total</th>
-                        <td id="totalRedScoreLbl">0</td>
                         <td id="totalBlueScoreLbl">0</td>
+                        <td id="totalRedScoreLbl">0</td>
                     </tr>
                 </table>
             </div>

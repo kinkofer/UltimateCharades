@@ -102,12 +102,12 @@
             }
 
             #timerDiv {
-                font-size: xx-large;
+                font-size: x-large;
             }
 
             #cancelTurnBtn, #endTurnBtn {
                 background-color: gray;
-                height: 20%;
+                height: 15%;
                 width: 90%;
                 font-size: xx-large;
             }
@@ -150,8 +150,8 @@
 
             <div id="teamDiv" class="noTeam">
                 <h1>Choose your team</h1>
-                <button id="redTeamBtn" class="redTeam">Red</button>
                 <button id="blueTeamBtn" class="blueTeam">Blue</button>
+                <button id="redTeamBtn" class="redTeam">Red</button>
             </div>
             <div id="phraseDiv">
                 <h1>Enter your phrases:</h1>
@@ -373,8 +373,11 @@
 
             var takingTurnDeviceID = null;
 
+            var timerMax = 60;
             var timer = 60;
             var timerInterval;
+
+            var didEndRound = false;
 
 
             function init() {
@@ -510,6 +513,7 @@
                 phrasesSubmitted = 0;
                 $('#phrasesSubmittedLbl').html("0");
                 charades.length = 0;
+                timer = timerMax;
             }
 
 
@@ -617,9 +621,13 @@
                         $('#confirmTakingTurnDiv').show();
                         $('#takingTurnDiv').hide();
                         changeElementToTeamColor($('#startTurnBtn').get(0), player.team);
+
                         viewManager.show("Game");
-                            
                         updateGame();
+
+                        if (didEndRound) {
+                            setPlayerState(PlayerState.TAKING_TURN);
+                        }
                         break;
                     case PlayerState.TAKING_TURN:
                         changeElementToTeamColor($('#startClueGivingBtn').get(0), player.team);
@@ -684,8 +692,11 @@
                 $('#confirmTakingTurnDiv').hide();
                 $('#takingTurnDiv').show();
 
+                didEndRound = false;
+
                 charades = shuffle(charades);
 
+                $('#timer').html(timer);
                 timerInterval = setInterval(countdown, 1000);
 
                 showNextPhrase();
@@ -694,7 +705,7 @@
             
             function countdown() {
                 if (timer == 0) {
-                    timer = 60;
+                    timer = timerMax;
                     endTurn();
                 }
                 else {
@@ -726,6 +737,8 @@
 
             function endTurn() {
                 clearInterval(timerInterval);
+                timer = timerMax;
+
                 currentCharade = null;
                 $('#phrase').html("");
 
@@ -738,6 +751,8 @@
 
 
             function endRound() {
+                clearInterval(timerInterval);
+
                 currentCharade = null;
                 $('#phrase').html("");
 
@@ -747,6 +762,7 @@
                 // Check for end game
                 var screen = airconsole.getCustomDeviceState(AirConsole.SCREEN);
                 if (screen.round != Round.THREE) {
+                    didEndRound = true;
                     setPlayerState(PlayerState.WAITING_FOR_NEXT_ROUND);
                 }
                 else {
