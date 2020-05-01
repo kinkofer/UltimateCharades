@@ -10,11 +10,18 @@
         <link rel="stylesheet" type="text/css" href="style.css" />
 
         <style>
-            body { color: whitesmoke; }
+            body { 
+                color: whitesmoke; 
+                font-family: Verdana, Geneva, Tahoma, sans-serif;
+            }
 
             h1 { 
                 text-align: center;
                 font-size: x-large;
+            }
+
+            button {
+                text-align: center;
             }
 
             #playerDiv { 
@@ -23,13 +30,50 @@
                 padding: 10px;
             }
 
-            #PlayerStart, #Game, #TakingTurn, #Guessing, #EndingRound, #GameOver { text-align: center; }
+            #PlayerStart, #Rules, #Game, #TakingTurn, #Guessing, #EndingRound, #GameOver { text-align: center; }
+
+            #settingsBtn, #rulesBtn, #closeRulesBtn {
+                position: fixed;
+                top: 0px;
+                width: 20%;
+                height: 40px;
+                font-size: medium;
+                background-color: gray;
+                color: whitesmoke;
+                border: solid 1px whitesmoke;
+            }
+
+            #settingsBtn {
+                left: 0px;
+            }
+
+            #rulesBtn, #closeRulesBtn {
+                right: 0px;
+            }
+
+            #Rules p {
+                text-align: left;
+                font-size: 14px;
+            }
+
+            #Rules li {
+                margin-left: -20px;
+                text-align: left;
+                font-size: 14px;
+            }
+
+            #rulesSummaryBtn, #rulesSetupBtn, #rulesInstructionsBtn, #rulesRoundBtn {
+                margin-top: 4px;
+                border: solid 1px whitesmoke;
+                font-size: 12px;
+                width: 22%;
+                height: 30px;
+            }
 
             #redTeamBtn, #blueTeamBtn {
                 display: inline-block;
                 color: whitesmoke;
                 border: solid 1px whitesmoke;
-                text-align: center;
                 font-size: 20px;
                 width: 40%;
                 height: 50px;
@@ -40,7 +84,6 @@
             #startNextRoundBtn, #restartBtn {
                 color: whitesmoke;
                 border: solid 1px whitesmoke;
-                text-align: center;
                 font-size: 20px;
                 width: 40%;
                 height: 50px;
@@ -100,6 +143,11 @@
 
 
         <div id="PlayerStart" class="view default-view">
+            <div id="settingsDiv">
+                <button id="settingsBtn" class="" style="display: none;">Settings</button>
+                <button id="rulesBtn">Rules</button>
+            </div>
+
             <div id="teamDiv" class="noTeam">
                 <h1>Choose your team</h1>
                 <button id="redTeamBtn" class="redTeam">Red</button>
@@ -118,7 +166,7 @@
             <div id="readyDiv">
                 <h1>Ready to start?</h1>
                 <p id="readyTeamError" class="errorMessage" style="display: none;">Choose a team first</p>
-                <p id="readyPhrasesError" class="errorMessage" style="display: none;">Submit at least 3 phrases</p>
+                <p id="readyPhrasesError" class="errorMessage" style="display: none;">Submit at least <span id="minPhrasesErrorMessage">3</span> phrases</p>
                 <button id="readyBtn">Ready</button>
             </div>
             <div id="cancelReadyDiv" style="display: none;">
@@ -128,6 +176,102 @@
             <div id="captainReadyDiv" style="display: none;">
                 <h2>Everyone is ready!</h2>
                 <button id="startBtn">Start Game</button>
+            </div>
+        </div>
+
+
+        <div id="Settings" class="view">
+            <h2>Settings</h2>
+            <div>
+                <label>Timer</label>
+                <input type="text" value="60" />
+            </div>
+            <div>
+                <label>Minimum Phrases Per Player</label>
+                <button id="minPhraseDecrementBtn" class="counterBtn">-</button>
+                <span>3</span>
+                <button id="minPhraseIncrementBtn" class="counterBtn">+</button>
+            </div>
+            <div>
+                <label>Maximum Phrases Per Player</label>
+                <button id="maxPhraseDecrementBtn" class="counterBtn">-</button>
+                <span>3</span>
+                <button id="maxPhraseIncrementBtn" class="counterBtn">+</button>
+            </div>
+            <div style="display: none;">
+                <label>Enable Phrase Passing</label>
+                <input type="checkbox" />
+            </div>
+            <div>
+                <button id="cancelSettingsBtn">Cancel</button>
+                <button id="saveSettingsBtn">Save</button>
+            </div>
+        </div>
+
+
+        <div id="Rules" class="view">
+            <button id="closeRulesBtn">Close</button>
+
+            <button id="rulesSummaryBtn">Summary</button>
+            <button id="rulesSetupBtn">Setup</button>
+            <button id="rulesInstructionsBtn">Instructions</button>
+            <button id="rulesRoundBtn">Rounds</button>
+
+            <div id="rulesSummaryDiv">
+                <h3>Summary</h2>
+                <p>
+                    Ultimate Charades is a unique take on the classic party game.
+                    The goal is to see which team can guess the most phrases over three rounds.
+                    Each round uses the same phrases, so be sure to pay attention while the other team
+                    gives clues too.
+                </p>
+            </div>
+            <div id="rulesSetupDiv" style="display: none;">
+                <h3>Setup</h3>
+                <ul>
+                    <li>The first player that joins the game is the Captain, 
+                        who begins each round when everyone is ready. </li>
+                    <li>Start by selecting your team and entering phrases.</li>
+                    <li>Phrases can be movie titles, song lyrics, or anything really.</li>
+                    <li>Use the AirConsole icon to change your nickname.</li>
+                    <li>Decide which team will go first, and the turn order on each team.</li>
+                </ul>
+            </div>
+            <div id="rulesInstructionsDiv" style="display: none;">
+                <h3>Instructions</h3>
+                <ul>
+                    <li>The red and blue teams should alternate clue givers until the round ends.</li>
+                    <li>When it's your turn press the "It's my turn" button.</li>
+                    <li>The timer begins when you press "Start clue giving."</li>
+                    <li>Only players on your team are allowed to guess.</li>
+                    <li>You will be given the phrase for which you need to give clues.
+                        Each round has different rules for clue giving.</li>
+                    <li>If your team guesses the phrase <em>exactly</em>, press "Correct."</li>
+                    <li>If you make a mistake, like saying a word in the phrase, press "End Turn."</li>
+                    <li>Once the timer runs out, or if the last phrase in the round is guessed correctly,
+                        your turn will end automatically.</li>
+                    <li>If you ended the round, you will go first in the next round using your remaining time.
+                        Otherwise play passes to the next team.</li>
+                    <li>Continue taking turns guessing until all three rounds have ended, 
+                        then check the score to see which team wins.</li>
+                </ul>
+            </div>
+            <div id="rulesRoundDiv" style="display: none;">
+                <h3>Round One</h3>
+                <p>
+                    The clue giver can say anything they want except for the words in the phrase.
+                    Don't use any gestures, speaking only. The phrase has to be guessed <em>exactly</em>,
+                    especially because it will continue to be used in subsequent rounds.
+                </p>
+                <h3>Round Two</h3>
+                <p>
+                    This is the familiar charades round. No talking or sounds of any kind.
+                </p>
+                <h3>Round Three</h3>
+                <p>
+                    In this round you can only give a <b>one-word</b> clue. 
+                    Avoid any intonation while giving the clue, and no gestures.
+                </p>
             </div>
         </div>
 
@@ -192,7 +336,7 @@
 
         <div id="playerDivTemplate" style="display: none;">
             <img src="" class="playerImage" width="32" height="32" />
-            <span class="captainLbl" style="display: none;">Captain </span>
+            <span class="captainOnly" style="display: none;">Captain </span>
             <span class="playerNickname"></span>
         </div>
 
@@ -235,6 +379,14 @@
 
             function init() {
                 airconsole = new AirConsole();
+
+                $('#rulesBtn').click(_ => viewManager.show("Rules"));
+                $('#closeRulesBtn').click(_ => viewManager.show("PlayerStart"));
+
+                $('#rulesSummaryBtn').click(_ => showRules(RulesPage.SUMMARY));
+                $('#rulesSetupBtn').click(_ => showRules(RulesPage.SETUP));
+                $('#rulesInstructionsBtn').click(_ => showRules(RulesPage.INSTRUCTIONS));
+                $('#rulesRoundBtn').click(_ => showRules(RulesPage.ROUND));
 
                 $('#redTeamBtn').click(_ => setPlayerTeam(Team.RED));
                 $('#blueTeamBtn').click(_ => setPlayerTeam(Team.BLUE));
@@ -360,6 +512,25 @@
                 charades.length = 0;
             }
 
+
+
+            // - Rules
+
+            function showRules(page) {
+                $('#rulesSummaryDiv').hide();
+                $('#rulesSetupDiv').hide();
+                $('#rulesInstructionsDiv').hide();
+                $('#rulesRoundDiv').hide();
+
+                switch (page) {
+                    case RulesPage.SUMMARY: $('#rulesSummaryDiv').show(); break;
+                    case RulesPage.SETUP: $('#rulesSetupDiv').show(); break;
+                    case RulesPage.INSTRUCTIONS: $('#rulesInstructionsDiv').show(); break;
+                    case RulesPage.ROUND: $('#rulesRoundDiv').show(); break;
+                }
+            }
+
+
             
             // - Player Start
 
@@ -374,7 +545,7 @@
             function setCaptain(isCaptain) {
                 player.isCaptain = isCaptain;
                 airconsole.setCustomDeviceStateProperty("isCaptain", isCaptain);
-                isCaptain ? $('.captainLbl').show() : $('.captainLbl').hide();
+                isCaptain ? $('.captainOnly').show() : $('.captainOnly').hide();
             }
 
 
@@ -396,6 +567,7 @@
 
                 // Check submitted phrases
                 if (!(phrasesSubmitted >= minPhrases)) {
+                    $('#minPhrasesErrorMessage').html(minPhrases);
                     $('#readyPhrasesError').show();
                     return;
                 }

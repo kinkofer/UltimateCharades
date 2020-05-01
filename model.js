@@ -56,6 +56,14 @@ const ScreenState = {
 }
 Object.freeze(ScreenState);
 
+// 700
+const RulesPage = {
+    SUMMARY: 700,
+    SETUP: 701,
+    INSTRUCTIONS: 702,
+    ROUND: 703
+}
+Object.freeze(RulesPage);
 
 
 
