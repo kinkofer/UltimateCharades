@@ -24,13 +24,20 @@
                 text-align: center;
             }
 
-            #playerDiv { 
-                vertical-align: middle;
-                font-size: xx-large;
+            #PlayerStart, #Rules, #Game, #TakingTurn, #Guessing, #EndingRound, #GameOver { text-align: center; }
+
+            .playerDiv { 
+                display: flex;
+                align-items: center;
+                text-align: left;
+                font-size: medium;
                 padding: 10px;
+                border-bottom: dotted 1px whitesmoke;
             }
 
-            #PlayerStart, #Rules, #Game, #TakingTurn, #Guessing, #EndingRound, #GameOver { text-align: center; }
+            .playerDiv span { 
+                margin-left: 1ex;
+            }
 
             #settingsBtn, #rulesBtn, #closeRulesBtn {
                 position: fixed;
@@ -64,6 +71,7 @@
 
             #rulesSummaryBtn, #rulesSetupBtn, #rulesInstructionsBtn, #rulesRoundBtn {
                 margin-top: 4px;
+                background-color: silver;
                 border: solid 1px whitesmoke;
                 font-size: 12px;
                 width: 22%;
@@ -98,7 +106,7 @@
             #startClueGivingBtn, #correctBtn {
                 height: 40%;
                 width: 90%;
-                font-size: xx-large;
+                font-size: x-large;
             }
 
             #timerDiv {
@@ -109,7 +117,7 @@
                 background-color: gray;
                 height: 15%;
                 width: 90%;
-                font-size: xx-large;
+                font-size: x-large;
             }
 
             #endTurnBtn {
@@ -117,7 +125,7 @@
             }
 
             #phrase {
-                font-size: xx-large;
+                font-size: x-large;
             }
 
             .roundDiv h3, #timerDiv {
@@ -155,7 +163,7 @@
             </div>
             <div id="phraseDiv">
                 <h1>Enter your phrases:</h1>
-                <input type="text" id="phraseTxt" placeholder="ex. A bird in the hand is worth two in the bush" />
+                <input type="text" id="phraseTxt" size="30" placeholder="ex. A bird in the hand is worth two in the bush" />
                 <button id="phraseBtn">Submit</button>
                 <p>
                     <span>Phrases submitted:</span>
