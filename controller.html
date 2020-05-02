@@ -103,7 +103,7 @@
                 font-size: xx-large;
             }
 
-            #startClueGivingBtn, #correctBtn {
+            #startClueGivingBtn, #correctBtn, #sendScoreBtn {
                 height: 40%;
                 width: 90%;
                 font-size: x-large;
@@ -113,11 +113,15 @@
                 font-size: x-large;
             }
 
-            #cancelTurnBtn, #endTurnBtn {
+            #cancelTurnBtn, #endTurnBtn, #addPointBtn {
                 background-color: gray;
                 height: 15%;
                 width: 90%;
                 font-size: x-large;
+            }
+
+            #addPointBtn {
+                color: whitesmoke;
             }
 
             #endTurnBtn {
@@ -197,18 +201,25 @@
             <div>
                 <label>Minimum Phrases Per Player</label>
                 <button id="minPhraseDecrementBtn" class="counterBtn">-</button>
-                <span>3</span>
+                <span id="minPhrase">3</span>
                 <button id="minPhraseIncrementBtn" class="counterBtn">+</button>
             </div>
             <div>
                 <label>Maximum Phrases Per Player</label>
                 <button id="maxPhraseDecrementBtn" class="counterBtn">-</button>
-                <span>3</span>
+                <span id="maxPhrase">3</span>
                 <button id="maxPhraseIncrementBtn" class="counterBtn">+</button>
             </div>
             <div style="display: none;">
+                <label>Enable Maximum Words in Phrase</label>
+                <input type="checkbox" id="maxWordsBox" />
+                <button id="maxWordDecrementBtn" class="counterBtn" disabled="disabled">-</button>
+                <span id="maxWords">5</span>
+                <button id="maxWordIncrementBtn" class="counterBtn" disabled="disabled">+</button>
+            </div>
+            <div style="display: none;">
                 <label>Enable Phrase Passing</label>
-                <input type="checkbox" />
+                <input type="checkbox" id="passPhraseBox" />
             </div>
             <div>
                 <button id="cancelSettingsBtn">Cancel</button>
@@ -248,17 +259,18 @@
             <div id="rulesInstructionsDiv" style="display: none;">
                 <h3>Instructions</h3>
                 <ul>
-                    <li>The red and blue teams should alternate clue givers until the round ends.</li>
-                    <li>When it's your turn press the "It's my turn" button.</li>
+                    <li>Keep track of turn order outside the game.</li>
+                    <li>Red and blue teams alternate clue givers.</li>
+                    <li>You'll see a button to press when it's your turn.</li>
                     <li>The timer begins when you press "Start clue giving."</li>
                     <li>Only players on your team are allowed to guess.</li>
-                    <li>You will be given the phrase for which you need to give clues.
+                    <li>You'll see the phrase for which you need to give clues.
                         Each round has different rules for clue giving.</li>
                     <li>If your team guesses the phrase <em>exactly</em>, press "Correct."</li>
                     <li>If you make a mistake, like saying a word in the phrase, press "End Turn."</li>
-                    <li>Once the timer runs out, or if the last phrase in the round is guessed correctly,
+                    <li>Once the timer runs out, or the last phrase in the round is guessed,
                         your turn will end automatically.</li>
-                    <li>If you ended the round, you will go first in the next round using your remaining time.
+                    <li>If you ended the round, you go first the next round using your remaining time.
                         Otherwise play passes to the next team.</li>
                     <li>Continue taking turns guessing until all three rounds have ended, 
                         then check the score to see which team wins.</li>
@@ -286,7 +298,7 @@
 
         <div id="Game" class="view">
             <div id="waitingTurnDiv">
-                <button id="startTurnBtn" class="noTeam">It's my turn</button>
+                <button id="startTurnBtn" class="noTeam">Press when it's your turn</button>
                 <p id="startTurnError" class="errorMessage" style="display: none;">Someone else is taking their turn</p>
             </div>
         </div>
@@ -309,6 +321,16 @@
                     <button id="correctBtn">Correct</button>
                     <button id="passBtn" style="display: none;">Pass</button>
                 </div>
+            </div>
+            <div id="endTakingTurnDiv" style="display: none;">
+                <div>
+                    <p>
+                        Did your team guess your last phrase before you could press "Correct"?
+                        You can give your team the point if everyone agrees.
+                    </p>
+                    <button id="addPointBtn">Add a point</button>
+                </div>
+                <button id="sendScoreBtn" class="noTeam">Send score</button>
             </div>
         </div>
 
@@ -414,8 +436,15 @@
                 $('#startClueGivingBtn').click(startTurn);
                 $('#cancelTurnBtn').click(_ => setPlayerState(PlayerState.WAITING_TURN));
 
-                $('#endTurnBtn').click(endTurn);
+                $('#endTurnBtn').click(_ => endTurn(false));
                 $('#correctBtn').click(guessCurrentPhrase);
+
+                $('#addPointBtn').click(_ => {
+                    currentCharade.state = CharadeState.GUESSED;
+                    currentCharade.team = player.team;
+                    sendScore();
+                });
+                $('#sendScoreBtn').click(sendScore);
 
                 $('#startNextRoundBtn').click(_ => airconsole.sendEvent(AirConsole.SCREEN, UCEvent.START_NEXT_ROUND, null));
                 $('#restartBtn').click(_ => airconsole.sendEvent(AirConsole.SCREEN, UCEvent.START_NEW_GAME, null));
@@ -704,6 +733,7 @@
 
                 charades = shuffle(charades);
 
+                // Don't reset timer here in case this is continuing from a previous round
                 $('#timer').html(timer);
                 timerInterval = setInterval(countdown, 1000);
 
@@ -713,8 +743,7 @@
             
             function countdown() {
                 if (timer == 0) {
-                    timer = timerMax;
-                    endTurn();
+                    endTurn(true);
                 }
                 else {
                     $('#timer').html(timer);
@@ -724,6 +753,13 @@
 
 
             function guessCurrentPhrase() {
+                // Add a delay on the Correct button
+                $('#correctBtn').prop('disabled', true);
+                var delay = setInterval(_ => {
+                    $('#correctBtn').prop('disabled', false);
+                    clearInterval(delay);
+                }, 750);
+
                 currentCharade.state = CharadeState.GUESSED;
                 currentCharade.team = player.team;
                 showNextPhrase();
@@ -731,7 +767,7 @@
 
 
             function showNextPhrase() {
-                let unguessedCharades = charades.filter(e => e.state == CharadeState.NEW);
+                var unguessedCharades = charades.filter(e => e.state == CharadeState.NEW);
 
                 if (unguessedCharades.length == 0) {
                     endRound();
@@ -743,8 +779,43 @@
             }
 
 
-            function endTurn() {
+            // Called if the user ends their turn or the timer expires
+            function endTurn(fromTimer) {
                 clearInterval(timerInterval);
+
+                if (fromTimer) {
+                    // Confirm end turn
+                    changeElementToTeamColor($('#sendScoreBtn').get(0), player.team);
+                    $('#takingTurnDiv').hide();
+                    $('#endTakingTurnDiv').show();
+
+                    // Add a delay on the Send Score and Add a Point buttons
+                    $('#addPointBtn').prop('disabled', true);
+                    $('#sendScoreBtn').prop('disabled', true);
+                    var delay = setInterval(_ => {
+                        $('#addPointBtn').prop('disabled', false);
+                        $('#sendScoreBtn').prop('disabled', false);
+                        clearInterval(delay);
+                    }, 750);
+                }
+                else {
+                    sendScore();
+                }
+            }
+
+
+            // Send score after the timer expires
+            function sendScore() {
+                $('#endTakingTurnDiv').hide();
+
+                // Check round end in case the team gave themselves a point
+                var unguessedCharades = charades.filter(e => e.state == CharadeState.NEW);
+                if (unguessedCharades.length == 0) {
+                    endRound();
+                    return;
+                }
+
+                // Reset timer
                 timer = timerMax;
 
                 currentCharade = null;
@@ -770,7 +841,13 @@
                 // Check for end game
                 var screen = airconsole.getCustomDeviceState(AirConsole.SCREEN);
                 if (screen.round != Round.THREE) {
-                    didEndRound = true;
+                    // If player has remaining time they will go first next round
+                    if (timer != 0) {
+                        didEndRound = true;
+                    }
+                    else {
+                        timer = timerMax;
+                    }
                     setPlayerState(PlayerState.WAITING_FOR_NEXT_ROUND);
                 }
                 else {
