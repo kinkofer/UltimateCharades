@@ -363,6 +363,14 @@
         </div>
 
 
+        <div id="GameInProgress" class="view">
+            <h1>Game In Progress</h1>
+            <div>
+                <p>Please wait until the next game begins.</p>
+            </div>
+        </div>
+
+
 
         <div id="playerDivTemplate" style="display: none;">
             <img src="" class="playerImage" width="32" height="32" />
@@ -393,18 +401,17 @@
             var viewManager = null;
 
             var player;
-            var phrasesSubmitted = 0;
 
             var charades = [];
             var currentCharade = null;
 
-            var minPhrases = 3;
+            var minPhrases = 1;
             var maxPhrases = 3;
 
             var takingTurnDeviceID = null;
 
-            var timerMax = 60;
-            var timer = 60;
+            var timerMax = 10;
+            var timer = 10;
             var timerInterval;
 
             var didEndRound = false;
@@ -492,6 +499,8 @@
 
 
                 airconsole.onCustomDeviceStateChange = function(device_id, data) {
+                    if (player.state == PlayerState.LATE_ENTRY && device_id != AirConsole.SCREEN) { return; }
+
                     if (device_id == AirConsole.SCREEN) {
                         if (data.round != Round.NONE) {
                             updateGame();
@@ -518,7 +527,7 @@
                             // Next round
                             setPlayerState(PlayerState.WAITING_TURN);
                         }
-                        else if (player.state == PlayerState.GAME_OVER &&
+                        else if ([PlayerState.GAME_OVER, PlayerState.LATE_ENTRY].includes(player.state) &&
                             data.state == ScreenState.NEW) {
                             // New game
                             setPlayerState(PlayerState.NONE);
@@ -543,14 +552,54 @@
                 airconsole.on(UCEvent.SEND_CHARADES, function(device_id, data, context) {
                     charades = data;
                 });
+
+                airconsole.on(UCEvent.SEND_PLAYER, function(device_id, data, context) {
+                    reconnect(data);
+                });
             }
 
 
             function resetGame() {
-                phrasesSubmitted = 0;
-                $('#phrasesSubmittedLbl').html("0");
+                player.phrasesSubmitted = 0;
                 charades.length = 0;
                 timer = timerMax;
+                updatePlayerStart();
+            }
+
+
+            /// When a player reconnects, restore their player data and set the correct player state
+            function reconnect(data) {
+                player = data["player"];
+                var screenState = data["screenState"];
+
+                if ([PlayerState.NONE, PlayerState.NOT_READY].includes(player.state) &&
+                    ![ScreenState.NEW, ScreenState.READY].includes(screenState)) {
+                    player.state = PlayerState.NONE;
+                    // If game already started and player was not in, they cannot join.
+                    player.state = PlayerState.LATE_ENTRY;
+                    viewManager.show("GameInProgress");
+                    return;
+                }
+                else if (screenState == ScreenState.TAKING_TURN && 
+                    player.state != PlayerState.TAKING_TURN) {
+                    takingTurnDeviceID = data["takingTurnDeviceID"];
+                    player.state = PlayerState.GUESSING;
+                }
+                else if (player.state == PlayerState.GUESSING && 
+                    screenState == ScreenState.WAITING_TURN) {
+                    player.state = PlayerState.WAITING_TURN;
+                }
+                else if (screenState == ScreenState.ENDING_ROUND) {
+                    player.state = PlayerState.WAITING_FOR_NEXT_ROUND;
+                }
+                else if (screenState == ScreenState.GAME_OVER) {
+                    player.state = PlayerState.GAME_OVER;
+                }
+
+                updatePlayerStart();
+                updateGame();
+
+                setPlayerState(player.state);
             }
 
 
@@ -575,18 +624,27 @@
             
             // - Player Start
 
+            function updatePlayerStart() {
+                changeElementToTeamColor($("#teamDiv").get(0), player.team);
+                $('#phrasesSubmittedLbl').html(player.phrasesSubmitted);
+
+                player.isCaptain ? $('.captainOnly').show() : $('.captainOnly').hide();
+            }
+
+
             function setPlayerTeam(team) {
                 player.team = team;
                 airconsole.setCustomDeviceStateProperty("team", team);
-                changeElementToTeamColor($("#teamDiv").get(0), team);
+                
                 $('#readyTeamError').hide();
+                updatePlayerStart();
             }
 
 
             function setCaptain(isCaptain) {
                 player.isCaptain = isCaptain;
                 airconsole.setCustomDeviceStateProperty("isCaptain", isCaptain);
-                isCaptain ? $('.captainOnly').show() : $('.captainOnly').hide();
+                updatePlayerStart();
             }
 
 
@@ -607,7 +665,7 @@
                 }
 
                 // Check submitted phrases
-                if (!(phrasesSubmitted >= minPhrases)) {
+                if (!(player.phrasesSubmitted >= minPhrases)) {
                     $('#minPhrasesErrorMessage').html(minPhrases);
                     $('#readyPhrasesError').show();
                     return;
@@ -627,6 +685,9 @@
                 }
             }
 
+
+
+            // Player State
 
             function setPlayerState(newState) {
                 var oldState = player.state;
@@ -864,7 +925,7 @@
             // - Actions
 
             function sendPhrase() {
-                if (phrasesSubmitted == maxPhrases) {
+                if (player.phrasesSubmitted == maxPhrases) {
                     $('#phraseMaxError').show();
                     return;
                 }
@@ -878,8 +939,8 @@
 
                 airconsole.sendEvent(AirConsole.SCREEN, UCEvent.SEND_PHRASE, { "phrase": phrase });
 
-                phrasesSubmitted++;
-                $('#phrasesSubmittedLbl').html(phrasesSubmitted);
+                player.phrasesSubmitted++;
+                $('#phrasesSubmittedLbl').html(player.phrasesSubmitted);
 
                 $('#phraseTxt').val("");
 

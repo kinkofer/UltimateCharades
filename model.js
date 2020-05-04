@@ -15,7 +15,8 @@ const PlayerState = {
     TAKING_TURN: 204,
     GUESSING: 205,
     WAITING_FOR_NEXT_ROUND: 206,
-    GAME_OVER: 207
+    GAME_OVER: 207,
+    LATE_ENTRY: 208
 };
 Object.freeze(PlayerState);
 
@@ -25,7 +26,9 @@ const UCEvent = {
     SEND_CHARADES: 301,
     START_GAME: 302,
     START_NEXT_ROUND: 303,
-    START_NEW_GAME: 304
+    START_NEW_GAME: 304,
+    // In case of re-connect
+    SEND_PLAYER: 305
 };
 Object.freeze(UCEvent);
 
@@ -82,6 +85,10 @@ class Player {
         this.team = Team.NONE;
         this.state = PlayerState.NONE;
         this.isCaptain = false;
+
+        // Fields for keeping track in case of disconnect
+        this.isConnected = true;
+        this.phrasesSubmitted = 0;
     }
 
     getDivID() {

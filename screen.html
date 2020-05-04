@@ -89,10 +89,10 @@
             <div id="readyDiv" style="display: none;">
                 <h2>Everyone is ready!</h2>
             </div>
-            <div id="playersDiv">
+            <div>
                 <h2>Waiting for...</h2>
+                <div id="playersDiv"></div>
             </div>
-
             <div>
                 <div id="blueTeamDiv">
                     <h2>Blue Team</h2>
@@ -200,6 +200,9 @@
 
             var charades = [];
 
+            /**
+            * @param { Player } playerTakingTurn
+            */
             var playerTakingTurn = null;
 
             var score;
@@ -220,10 +223,11 @@
 
 
                 airconsole.onConnect = function(device_id) {
-                    if (players.some(e => e.device_id == device_id)) {
+                    var player = players.find(e => e.device_id == device_id);
+                    if (player != undefined) {
                         // Existing player detected
-                        refreshPlayers();
-                        return
+                        reconnectPlayer(player);
+                        return;
                     }
 
                     var profilePicture = airconsole.getProfilePicture(device_id);
@@ -239,10 +243,13 @@
 
 
                 airconsole.onDisconnect = function(device_id) {
-                    // Remove player
-                    players = players.filter(e => e.device_id != device_id);
-
+                    // Player disconnected
+                    var player = players.find(e => e.device_id == device_id);
+                    player.isConnected = false;
+                    player.getJQueryDiv().remove();
+                    
                     refreshPlayers();
+                    checkPlayerStates();
                 };
 
 
@@ -275,7 +282,7 @@
                             checkPlayerStates();
                         }
                         else if (data.state == PlayerState.TAKING_TURN) {
-                            playerTakingTurn = players.find(e => e.device_id == device_id);;
+                            playerTakingTurn = players.find(e => e.device_id == device_id);
                             setScreenState(ScreenState.TAKING_TURN);
                         }
                         else if (playerTakingTurn != null && playerTakingTurn.device_id == device_id && data.state == PlayerState.WAITING_TURN) {
@@ -308,6 +315,9 @@
 
 
                 airconsole.on(UCEvent.SEND_PHRASE, function(device_id, data, context) {
+                    var player = players.find(e => e.device_id == device_id);
+                    player.phrasesSubmitted++;
+
                     charades.push(new Charade(data.phrase));
                     $('#phrasesSubmittedLbl').html(charades.length);
                 });
@@ -334,24 +344,62 @@
             }
 
 
+            function reconnectPlayer(player) {
+                player.isConnected = true;
+
+                var takingTurnDeviceID;
+                if (playerTakingTurn != null) { takingTurnDeviceID = playerTakingTurn.device_id }
+
+                airconsole.sendEvent(player.device_id, UCEvent.SEND_PLAYER, {
+                    "player": player,
+                    "screenState": screen.state,
+                    "takingTurnDeviceID": takingTurnDeviceID
+                });
+
+                if (player.team != Team.NONE) {
+                    setPlayerTeam(player.device_id, player.team);
+                }
+                refreshPlayers();
+            }
+
+
+            /// Updates player divs
             function refreshPlayers() {
                 var deviceIDs = airconsole.getControllerDeviceIds();
                 airconsole.setActivePlayers(deviceIDs.length);
 
-                players.forEach(e => {
-                    createPlayerDiv(e);
+                players.filter(e => e.isConnected).forEach(player => {
+                    var playerDiv = getPlayerDiv(player);
+                    var captainLbl = playerDiv.find('.captainLbl');
+                    player.isCaptain ? captainLbl.show() : captainLbl.hide();
 
-                    var captainLbl = e.getJQueryDiv().find('.captainLbl');
-                    e.isCaptain ? captainLbl.show() : captainLbl.hide();
+                    var teamDiv;
+
+                    switch (player.team) {
+                    case Team.NONE:
+                        teamDiv = $('#playersDiv'); break;
+                    case Team.BLUE:
+                        teamDiv = $('#blueTeamDiv'); break;
+                    case Team.RED:
+                        teamDiv = $('#redTeamDiv'); break;
+                    }
+
+                    if (!$.contains(teamDiv, playerDiv)) {
+                        // Remove from previous div
+                        playerDiv.detach();
+                        // Move to div
+                        teamDiv.append(playerDiv);
+                    }
                 });
             }
 
 
-            function createPlayerDiv(player) {
-                var div = document.getElementById(player.getDivID());
-                if (div != undefined) {
+            /// Return the existing playerDiv or create it
+            function getPlayerDiv(player) {
+                var div = player.getJQueryDiv();
+                if (div.length) {
                     updatePlayerDiv(player);
-                    return;
+                    return div;
                 }
 
                 div = $('<div class="playerDiv noTeam"></div>');
@@ -370,7 +418,7 @@
                 
                 div.append(img, captainSpan, playerNicknameSpan, playerStateSpan);
 
-                $('#playersDiv').append(div);
+                return div;
             }
 
 
@@ -384,34 +432,21 @@
                 var state = player.state == PlayerState.READY ? "...Ready!" : "...";
                 player.getJQueryDiv().find(".playerState")
                     .html(state);
+
+                changeElementToTeamColor(player.getJQueryDiv().get(0), player.team);
             }
 
 
             function setPlayerTeam(device_id, team) {
                 var player = players.find(e => e.device_id == device_id);
-
-                if (player == undefined) { return; }
-
                 player.team = team;
 
-                var playerDiv = document.getElementById(player.getDivID());
-                // remove from previous div
-                playerDiv.parentNode.removeChild(playerDiv);
-
-                var teamDivID = (team == Team.RED) ? "redTeamDiv" : "blueTeamDiv";
-                // move to team div
-                var teamDiv = document.getElementById(teamDivID);
-                teamDiv.appendChild(playerDiv);
-
-                changeElementToTeamColor(playerDiv, team);
+                refreshPlayers();
             }
 
 
             function setPlayerState(device_id, state) {
                 var player = players.find(e => e.device_id == device_id);
-
-                if (player == undefined) { return; }
-                
                 player.state = state;
 
                 refreshPlayers();
@@ -419,7 +454,7 @@
 
 
             function checkPlayerStates() {
-                var unreadyPlayer = players.find(e => e.state != PlayerState.READY);
+                var unreadyPlayer = players.filter(e => e.isConnected).find(e => e.state != PlayerState.READY);
                 if (unreadyPlayer != undefined) { 
                     setScreenState(ScreenState.NEW);
                     return 
